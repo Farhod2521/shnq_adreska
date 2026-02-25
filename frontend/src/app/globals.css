@@ -1,0 +1,32 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-primary: #1a227f;
+  --color-background-light: #f6f6f8;
+  --font-sans: var(--font-inter);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color-scheme: light;
+  background: #f6f6f8;
+  color: #0f172a;
+  font-family: var(--font-inter), "Inter", sans-serif;
+}
+
+.material-symbols-outlined {
+  line-height: 1;
+  font-size: 24px;
+  font-style: normal;
+  vertical-align: middle;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
