@@ -32,8 +32,8 @@ services:
     ports:
       - "1000:1000"
     volumes:
-      - backend_static:/app/staticfiles
-      - backend_media:/app/media
+      - ./backend/staticfiles:/app/staticfiles
+      - ./backend/media:/app/media
     networks:
       - shnq_net
 
