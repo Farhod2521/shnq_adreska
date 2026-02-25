@@ -1,0 +1,8 @@
+
+djangorestframework
+django-cors-headers
+drf-yasg
+Pillow
+django-jazzmin
+gunicorn
+psycopg2-binary
