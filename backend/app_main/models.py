@@ -67,6 +67,20 @@ class NormativeCoefficient(models.Model):
         return self.get_normative_type_display()
 
 
+class DocumentCalculationCategory(models.Model):
+    name = models.CharField(max_length=255, unique=True, verbose_name="Kategoriya nomi")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqti")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Yangilangan vaqti")
+
+    class Meta:
+        ordering = ["name", "id"]
+        verbose_name = "Hujjat hisobi kategoriyasi"
+        verbose_name_plural = "Hujjat hisobi kategoriyalari"
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class DocumentCalculation(models.Model):
     class DocumentCategory(models.TextChoices):
         NEW = "new", "Yangi"
@@ -90,6 +104,14 @@ class DocumentCalculation(models.Model):
         max_length=32,
         choices=DocumentCategory.choices,
         verbose_name="Hujjat toifasi",
+    )
+    calculation_category = models.ForeignKey(
+        DocumentCalculationCategory,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="document_calculations",
+        verbose_name="Hisob-kitob kategoriyasi",
     )
     complexity_level = models.CharField(
         max_length=1,
@@ -127,6 +149,35 @@ class DocumentCalculation(models.Model):
         decimal_places=2,
         default=0,
         verbose_name="Yakuniy hisoblangan summa",
+    )
+    completed_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=0,
+        verbose_name="01.01.2026 holatiga bajarilgan",
+    )
+    planned_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=2,
+        default=0,
+        verbose_name="2026-yilga rejalashtirilgan",
+    )
+    development_deadline = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name="Ishlab chiqish muddati",
+    )
+    executor_organization = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        verbose_name="Ishni bajaruvchi tashkilot",
+    )
+    notes = models.TextField(
+        blank=True,
+        default="",
+        verbose_name="Izoh",
     )
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqti")
@@ -205,3 +256,4 @@ class DocumentCalculation(models.Model):
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         self.final_total_amount = result
         return result
+
