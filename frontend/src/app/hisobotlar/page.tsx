@@ -1,7 +1,7 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 type ReportRow = {
   order: number;
@@ -56,6 +56,7 @@ export default function HisobotlarPage() {
   const [report, setReport] = useState<ReportPayload | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const wordExportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadReport = async () => {
@@ -80,6 +81,68 @@ export default function HisobotlarPage() {
   const sections = useMemo(() => report?.sections ?? [], [report]);
   const summary = report?.summary ?? emptySummary;
 
+  const handleDownloadWord = () => {
+    if (!wordExportRef.current) {
+      return;
+    }
+
+    const reportHtml = wordExportRef.current.outerHTML;
+    const fullHtml = `<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hisobot</title>
+  <style>
+    body { font-family: "Times New Roman", Times, serif; margin: 24px; color: #0f172a; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { border: 1px solid #334155; padding: 6px; vertical-align: top; }
+    th { font-weight: 700; text-align: center; }
+    p { margin: 0; }
+  </style>
+</head>
+<body>${reportHtml}</body>
+</html>`;
+
+    const blob = new Blob([fullHtml], { type: "application/msword;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "hisobotlar.doc";
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintReport = () => {
+    if (!wordExportRef.current) {
+      return;
+    }
+
+    const reportHtml = wordExportRef.current.outerHTML;
+    const printWindow = window.open("", "_blank", "width=1200,height=900");
+    if (!printWindow) {
+      return;
+    }
+
+    printWindow.document.write(`<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hisobot</title>
+  <style>
+    body { font-family: "Times New Roman", Times, serif; margin: 0; padding: 10mm; color: #0f172a; background: #fff; }
+  </style>
+</head>
+<body>${reportHtml}</body>
+</html>`);
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.focus();
+      setTimeout(() => printWindow.print(), 200);
+    };
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-background-light text-slate-900">
       <AppSidebar active="hisobotlar" />
@@ -94,20 +157,15 @@ export default function HisobotlarPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                onClick={handlePrintReport}
                 type="button"
               >
                 <span className="material-symbols-outlined text-[18px]">print</span>
                 Chop etish
               </button>
               <button
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-600"
-                type="button"
-              >
-                <span className="material-symbols-outlined text-[18px]">table_view</span>
-                Excel
-              </button>
-              <button
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                onClick={handleDownloadWord}
                 type="button"
               >
                 <span className="material-symbols-outlined text-[18px]">description</span>
@@ -126,6 +184,7 @@ export default function HisobotlarPage() {
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-7">
             <div
+              ref={wordExportRef}
               className="mx-auto max-w-[1240px] rounded-sm border border-slate-200 bg-[#fbfbfc] p-6 text-[11px] leading-[1.4] shadow-[0_1px_3px_rgba(15,23,42,0.08)] md:p-10"
               style={{ fontFamily: '"Times New Roman", Times, serif' }}
             >
