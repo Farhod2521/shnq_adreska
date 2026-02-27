@@ -5,13 +5,19 @@ from django.db.models import Count, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.generics import ListAPIView, ListCreateAPIView
+from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import DocumentCalculation, NormativeCoefficient, StaffComposition
+from .models import (
+    DocumentCalculation,
+    DocumentCalculationCategory,
+    NormativeCoefficient,
+    StaffComposition,
+)
 from .serializers import (
     DocumentCalculationCreateSerializer,
+    DocumentCalculationCategorySerializer,
     DocumentCalculationSerializer,
     HealthCheckSerializer,
     NormativeCoefficientSerializer,
@@ -47,6 +53,13 @@ class StaffCompositionListAPIView(ListAPIView):
     queryset = StaffComposition.objects.filter(is_active=True).order_by("sort_order", "id")
 
 
+class DocumentCalculationCategoryListAPIView(ListAPIView):
+    authentication_classes = []
+    permission_classes = []
+    serializer_class = DocumentCalculationCategorySerializer
+    queryset = DocumentCalculationCategory.objects.all().order_by("name", "id")
+
+
 class DocumentCalculationListCreateAPIView(ListCreateAPIView):
     authentication_classes = []
     permission_classes = []
@@ -63,6 +76,26 @@ class DocumentCalculationListCreateAPIView(ListCreateAPIView):
         instance = serializer.save()
         response_data = DocumentCalculationSerializer(instance).data
         return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+class DocumentCalculationRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
+    authentication_classes = []
+    permission_classes = []
+    queryset = DocumentCalculation.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.method in ("PUT", "PATCH"):
+            return DocumentCalculationCreateSerializer
+        return DocumentCalculationSerializer
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        instance = serializer.save()
+        response_data = DocumentCalculationSerializer(instance).data
+        return Response(response_data, status=status.HTTP_200_OK)
 
 
 class DashboardStatsAPIView(APIView):

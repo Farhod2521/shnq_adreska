@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import Link from "next/link";
+import AppSidebar from "@/components/AppSidebar";
 import { useEffect, useRef, useState } from "react";
 
 type StaffSnapshotItem = {
@@ -40,6 +40,17 @@ type DocumentCategory =
   | "additional_change";
 
 type ComplexityLevel = "1" | "2" | "3";
+type DocumentFormValues = {
+  name: string;
+  normative_type: string;
+  total_pages: number;
+  complexity_level: ComplexityLevel;
+  document_category: DocumentCategory;
+  is_research_required: boolean;
+  development_deadline: string;
+  executor_organization: string;
+  notes: string;
+};
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 const FORMULA_MULTIPLIER = 2.3;
@@ -52,6 +63,9 @@ type DocumentCalculationItem = {
   document_category: DocumentCategory;
   complexity_level: ComplexityLevel;
   is_research_required: boolean;
+  development_deadline?: string;
+  executor_organization?: string;
+  notes?: string;
   selected_base_coefficient: string;
   selected_complexity_coefficient: string;
   staff_snapshot: StaffSnapshotItem[];
@@ -125,9 +139,25 @@ const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: 
   "3": { label: "Yuqori", className: "bg-red-100 text-red-800" },
 };
 
+const getInitialFormValues = (): DocumentFormValues => ({
+  name: "",
+  normative_type: "",
+  total_pages: 1,
+  complexity_level: "1",
+  document_category: "new",
+  is_research_required: false,
+  development_deadline: "",
+  executor_organization: "",
+  notes: "",
+});
+
 export default function HujjatlarPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingDocumentId, setEditingDocumentId] = useState<number | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [documentToDelete, setDocumentToDelete] = useState<DocumentCalculationItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [documents, setDocuments] = useState<DocumentCalculationItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedNormativeTypeFilter, setSelectedNormativeTypeFilter] = useState("");
@@ -140,42 +170,34 @@ export default function HujjatlarPage() {
   const [formError, setFormError] = useState("");
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
-  const [formValues, setFormValues] = useState<{
-    name: string;
-    normative_type: string;
-    total_pages: number;
-    complexity_level: ComplexityLevel;
-    document_category: DocumentCategory;
-    is_research_required: boolean;
-  }>({
-    name: "",
-    normative_type: "",
-    total_pages: 1,
-    complexity_level: "1",
-    document_category: "new",
-    is_research_required: false,
-  });
+  const [formValues, setFormValues] = useState<DocumentFormValues>(getInitialFormValues());
   const [staffCounts, setStaffCounts] = useState<Record<number, number>>({});
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const previous = document.body.style.overflow;
-    if (isModalOpen || isCreateModalOpen) {
+    if (isModalOpen || isCreateModalOpen || isDeleteConfirmOpen) {
       document.body.style.overflow = "hidden";
     }
     return () => {
       document.body.style.overflow = previous;
     };
-  }, [isModalOpen, isCreateModalOpen]);
+  }, [isModalOpen, isCreateModalOpen, isDeleteConfirmOpen]);
 
   useEffect(() => {
-    if (!isModalOpen && !isCreateModalOpen) {
+    if (!isModalOpen && !isCreateModalOpen && !isDeleteConfirmOpen) {
       return;
     }
     const onEsc = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (isDeleteConfirmOpen) {
+          setIsDeleteConfirmOpen(false);
+          setDocumentToDelete(null);
+          return;
+        }
         if (isCreateModalOpen) {
           setIsCreateModalOpen(false);
+          setEditingDocumentId(null);
           return;
         }
         setIsModalOpen(false);
@@ -183,7 +205,7 @@ export default function HujjatlarPage() {
     };
     window.addEventListener("keydown", onEsc);
     return () => window.removeEventListener("keydown", onEsc);
-  }, [isModalOpen, isCreateModalOpen]);
+  }, [isModalOpen, isCreateModalOpen, isDeleteConfirmOpen]);
 
   const openModal = (document: DocumentCalculationItem) => {
     setSelectedDocument(document);
@@ -196,11 +218,52 @@ export default function HujjatlarPage() {
   };
 
   const openCreateModal = () => {
+    setEditingDocumentId(null);
+    setFormError("");
+    setFormValues(getInitialFormValues());
+    setStaffCounts({});
+    setIsCreateModalOpen(true);
+  };
+
+  const openEditModal = (document: DocumentCalculationItem) => {
+    setEditingDocumentId(document.id);
+    setFormError("");
+    setFormValues({
+      name: document.name ?? "",
+      normative_type: document.normative_type ?? "",
+      total_pages: Number(document.total_pages) || 1,
+      complexity_level: document.complexity_level ?? "1",
+      document_category: document.document_category ?? "new",
+      is_research_required: Boolean(document.is_research_required),
+      development_deadline: document.development_deadline ?? "",
+      executor_organization: document.executor_organization ?? "",
+      notes: document.notes ?? "",
+    });
+    const snapshotCounts = (document.staff_snapshot ?? []).reduce<Record<number, number>>((acc, item) => {
+      acc[item.staff_id] = Number(item.employee_count) || 0;
+      return acc;
+    }, {});
+    setStaffCounts(snapshotCounts);
     setIsCreateModalOpen(true);
   };
 
   const closeCreateModal = () => {
     setIsCreateModalOpen(false);
+    setEditingDocumentId(null);
+    setFormError("");
+  };
+
+  const openDeleteConfirm = (document: DocumentCalculationItem) => {
+    setDocumentToDelete(document);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const closeDeleteConfirm = () => {
+    if (isDeleting) {
+      return;
+    }
+    setIsDeleteConfirmOpen(false);
+    setDocumentToDelete(null);
   };
 
   const loadDocuments = async () => {
@@ -340,8 +403,13 @@ export default function HujjatlarPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/document-calculations/`, {
-        method: "POST",
+      const endpoint = editingDocumentId
+        ? `${API_BASE_URL}/document-calculations/${editingDocumentId}/`
+        : `${API_BASE_URL}/document-calculations/`;
+      const method = editingDocumentId ? "PUT" : "POST";
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json",
         },
@@ -352,6 +420,9 @@ export default function HujjatlarPage() {
           document_category: formValues.document_category,
           complexity_level: formValues.complexity_level,
           is_research_required: formValues.is_research_required,
+          development_deadline: formValues.development_deadline.trim(),
+          executor_organization: formValues.executor_organization.trim(),
+          notes: formValues.notes.trim(),
           staff_counts: Object.fromEntries(
             Object.entries(staffCounts).map(([key, value]) => [key, Number(value) || 0])
           ),
@@ -369,7 +440,9 @@ export default function HujjatlarPage() {
       }
 
       const savedTotal = payload?.final_total_amount ?? finalTotalAmount;
-      setToastMessage(`Saqlandi. Yakuniy summa: ${formatMoney(toNumber(savedTotal))} so'm`);
+      setToastMessage(
+        `${editingDocumentId ? "Yangilandi" : "Saqlandi"}. Yakuniy summa: ${formatMoney(toNumber(savedTotal))} so'm`
+      );
       setShowToast(true);
       await loadDocuments();
       closeCreateModal();
@@ -377,6 +450,33 @@ export default function HujjatlarPage() {
       setFormError(error instanceof Error ? error.message : "Saqlashda xatolik yuz berdi.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const onConfirmDelete = async () => {
+    if (!documentToDelete) {
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/document-calculations/${documentToDelete.id}/`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Hujjatni o'chirishda xatolik yuz berdi.");
+      }
+      if (selectedDocument?.id === documentToDelete.id) {
+        closeModal();
+      }
+      setToastMessage("Hujjat muvaffaqiyatli o'chirildi.");
+      setShowToast(true);
+      await loadDocuments();
+      setIsDeleteConfirmOpen(false);
+      setDocumentToDelete(null);
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Hujjatni o'chirishda xatolik yuz berdi.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -493,68 +593,7 @@ export default function HujjatlarPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background-light text-slate-900">
-      <aside className="w-64 shrink-0 overflow-y-auto border-r border-slate-200 bg-white">
-        <div className="flex items-center gap-3 p-6">
-          <div className="rounded-lg bg-primary p-1.5 text-white">
-            <span className="material-symbols-outlined text-2xl">grid_view</span>
-          </div>
-          <h2 className="text-xl font-bold tracking-tight text-primary">Reglament</h2>
-        </div>
-
-        <div className="mb-6 px-4">
-          <div className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
-            <div className="flex size-10 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                alt="Admin rasmi"
-                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtzoAkIAumH2LuAB4wvdqHx2KrjXcK53UyjMyXhbMpHwaatDMU2leZDY9D7y3RcE4oRCa_6M0d914Xr9GclVREKG3T5Zj06mer9HcsWMOKRjhONJbUVbhgYXudkjXuGgfzp1WmjNZBFbLDYmFj9rL-7hW6bUDsK-xGYt3_trey2YWmkqeZhDMfvQj1scpKvSg_Y5NSGz-WesjlkolKv6iAxEdxfRE7FoeCmF7F0FzQ3XQ2cQMHiWUVxPqDjRlEnmWt5I_mNSpjb1A"
-              />
-            </div>
-            <div className="overflow-hidden">
-              <h1 className="truncate text-sm font-semibold">Admin foydalanuvchi</h1>
-              <p className="truncate text-xs text-slate-500">Boshqaruvchi</p>
-            </div>
-          </div>
-        </div>
-
-        <nav className="space-y-1 px-4">
-          <Link
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 transition-colors hover:bg-slate-100"
-            href="/dashboard"
-          >
-            <span className="material-symbols-outlined">dashboard</span>
-            <span className="text-sm font-medium">Asosiy Panel</span>
-          </Link>
-          <Link
-            className="flex items-center gap-3 rounded-lg border border-primary/10 bg-primary/10 px-3 py-2.5 font-semibold text-primary"
-            href="/hujjatlar"
-          >
-            <span className="material-symbols-outlined">description</span>
-            <span className="text-sm">Hujjatlar</span>
-          </Link>
-          <a
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 transition-colors hover:bg-slate-100"
-            href="#"
-          >
-            <span className="material-symbols-outlined">bar_chart</span>
-            <span className="text-sm font-medium">Hisobotlar</span>
-          </a>
-          <a
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 transition-colors hover:bg-slate-100"
-            href="#"
-          >
-            <span className="material-symbols-outlined">settings</span>
-            <span className="text-sm font-medium">Sozlamalar</span>
-          </a>
-          <a
-            className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-slate-600 transition-colors hover:bg-slate-100"
-            href="#"
-          >
-            <span className="material-symbols-outlined">help_center</span>
-            <span className="text-sm font-medium">Yordam</span>
-          </a>
-        </nav>
-      </aside>
+      <AppSidebar active="hujjatlar" />
 
       <main className="flex flex-1 flex-col overflow-hidden bg-background-light">
         <header className="z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-8">
@@ -738,6 +777,22 @@ export default function HujjatlarPage() {
                                 <span className="material-symbols-outlined text-xl">visibility</span>
                               </button>
                               <button
+                                className="rounded-md p-1.5 text-indigo-600 transition-colors hover:bg-indigo-50"
+                                onClick={() => openEditModal(doc)}
+                                title="Hujjatni tahrirlash"
+                                type="button"
+                              >
+                                <span className="material-symbols-outlined text-xl">edit</span>
+                              </button>
+                              <button
+                                className="rounded-md p-1.5 text-red-600 transition-colors hover:bg-red-50"
+                                onClick={() => openDeleteConfirm(doc)}
+                                title="Hujjatni o'chirish"
+                                type="button"
+                              >
+                                <span className="material-symbols-outlined text-xl">delete</span>
+                              </button>
+                              <button
                                 className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100"
                                 type="button"
                               >
@@ -801,10 +856,12 @@ export default function HujjatlarPage() {
                     Hujjatlar ro&apos;yxatiga qaytish
                   </p>
                   <h2 className="text-3xl font-bold tracking-tight text-slate-900">
-                    Yangi me&apos;yoriy hujjat qo&apos;shish
+                    {editingDocumentId ? "Me&apos;yoriy hujjatni tahrirlash" : "Yangi me&apos;yoriy hujjat qo&apos;shish"}
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Hujjat ma&apos;lumotlarini kiriting va avtomatik hisob-kitoblarni amalga oshiring.
+                    {editingDocumentId
+                      ? "Hujjat ma&apos;lumotlarini yangilang va qayta hisob-kitobni saqlang."
+                      : "Hujjat ma&apos;lumotlarini kiriting va avtomatik hisob-kitoblarni amalga oshiring."}
                   </p>
                 </div>
                 <button
@@ -1033,6 +1090,58 @@ export default function HujjatlarPage() {
                       </p>
                       <input name="research_coefficient" type="hidden" value={researchCoefficient} />
                     </div>
+
+                    <div className="md:col-span-3">
+                      <div className="mb-3 mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
+                        Qo&apos;shimcha ma&apos;lumotlar (ixtiyoriy)
+                      </div>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">Ishlab chiqish muddati</label>
+                      <input
+                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            development_deadline: event.target.value,
+                          }))
+                        }
+                        placeholder="Masalan: 2026-yil III-chorak"
+                        type="text"
+                        value={formValues.development_deadline}
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Ishni bajaruvchi tashkilot
+                      </label>
+                      <input
+                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            executor_organization: event.target.value,
+                          }))
+                        }
+                        placeholder="Masalan: Texnik me&apos;yorlash va standartlashtirish ITI"
+                        type="text"
+                        value={formValues.executor_organization}
+                      />
+                    </div>
+                    <div className="md:col-span-3">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">Izoh</label>
+                      <textarea
+                        className="min-h-[90px] w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            notes: event.target.value,
+                          }))
+                        }
+                        placeholder="Ixtiyoriy izoh..."
+                        value={formValues.notes}
+                      />
+                    </div>
                   </div>
                 </section>
 
@@ -1130,10 +1239,50 @@ export default function HujjatlarPage() {
                     type="submit"
                   >
                     <span className="material-symbols-outlined text-[20px]">save</span>
-                    {isSubmitting ? "Saqlanmoqda..." : "Saqlash va hisoblash"}
+                    {isSubmitting
+                      ? "Saqlanmoqda..."
+                      : editingDocumentId
+                        ? "Yangilash va qayta hisoblash"
+                        : "Saqlash va hisoblash"}
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isDeleteConfirmOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <span className="material-symbols-outlined text-[20px]">warning</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Rostan ham o&apos;chirasizmi?</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Bu amal ortga qaytarilmaydi.
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-800">{documentToDelete?.name}</p>
+              </div>
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                onClick={closeDeleteConfirm}
+                type="button"
+              >
+                Bekor qilish
+              </button>
+              <button
+                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isDeleting}
+                onClick={onConfirmDelete}
+                type="button"
+              >
+                {isDeleting ? "O'chirilmoqda..." : "Ha, o'chirish"}
+              </button>
             </div>
           </div>
         </div>
