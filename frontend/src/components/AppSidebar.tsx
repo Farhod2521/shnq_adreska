@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type SidebarSection = "dashboard" | "hujjatlar" | "hisobotlar";
+type SidebarSection = "dashboard" | "hujjatlar" | "hisobotlar" | "baza_xlsx";
 
 type AppSidebarProps = {
   active: SidebarSection;
@@ -17,7 +17,7 @@ export default function AppSidebar({ active }: AppSidebarProps) {
         <div className="rounded-lg bg-primary p-1.5 text-white">
           <span className="material-symbols-outlined text-2xl">grid_view</span>
         </div>
-        <h2 className="text-xl font-bold tracking-tight text-primary">DASHBOARD</h2>
+        <h2 className="text-xl font-bold tracking-tight text-primary">Reglament</h2>
       </div>
 
       <div className="mb-6 px-4">
@@ -48,6 +48,10 @@ export default function AppSidebar({ active }: AppSidebarProps) {
         <Link className={`${navItemBase} ${active === "hisobotlar" ? navItemActive : ""}`} href="/hisobotlar">
           <span className="material-symbols-outlined">bar_chart</span>
           <span className="text-sm font-medium">Hisobotlar</span>
+        </Link>
+        <Link className={`${navItemBase} ${active === "baza_xlsx" ? navItemActive : ""}`} href="/baza_xlsx">
+          <span className="material-symbols-outlined">upload_file</span>
+          <span className="text-sm font-medium">Baza XLSX</span>
         </Link>
         <a className={navItemBase} href="#">
           <span className="material-symbols-outlined">settings</span>

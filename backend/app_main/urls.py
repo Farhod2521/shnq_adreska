@@ -5,6 +5,7 @@ from .views import (
     DocumentCalculationCategoryListAPIView,
     DocumentCalculationListCreateAPIView,
     DocumentCalculationRetrieveUpdateDestroyAPIView,
+    DocumentCalculationXlsxImportAPIView,
     HealthCheckAPIView,
     NormativeCoefficientListAPIView,
     StaffCompositionListAPIView,
@@ -24,6 +25,11 @@ urlpatterns = [
         name="document-calculation-categories",
     ),
     path("document-calculations/", DocumentCalculationListCreateAPIView.as_view(), name="document-calculations"),
+    path(
+        "document-calculations/import-xlsx/",
+        DocumentCalculationXlsxImportAPIView.as_view(),
+        name="document-calculations-import-xlsx",
+    ),
     path(
         "document-calculations/<int:pk>/",
         DocumentCalculationRetrieveUpdateDestroyAPIView.as_view(),

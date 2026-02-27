@@ -33,6 +33,11 @@ type StaffCompositionItem = {
   sort_order: number;
 };
 
+type DocumentCalculationCategoryItem = {
+  id: number;
+  name: string;
+};
+
 type DocumentCategory =
   | "new"
   | "rework_harmonization"
@@ -41,6 +46,7 @@ type DocumentCategory =
 
 type ComplexityLevel = "1" | "2" | "3";
 type DocumentFormValues = {
+  calculation_category: number | "";
   name: string;
   normative_type: string;
   total_pages: number;
@@ -60,6 +66,8 @@ type DocumentCalculationItem = {
   name: string;
   total_pages: number;
   normative_type: string;
+  calculation_category?: number | null;
+  calculation_category_name?: string;
   document_category: DocumentCategory;
   complexity_level: ComplexityLevel;
   is_research_required: boolean;
@@ -140,6 +148,7 @@ const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: 
 };
 
 const getInitialFormValues = (): DocumentFormValues => ({
+  calculation_category: "",
   name: "",
   normative_type: "",
   total_pages: 1,
@@ -165,6 +174,7 @@ export default function HujjatlarPage() {
   const [selectedDocument, setSelectedDocument] = useState<DocumentCalculationItem | null>(null);
   const [normativeOptions, setNormativeOptions] = useState<NormativeCoefficientItem[]>([]);
   const [staffOptions, setStaffOptions] = useState<StaffCompositionItem[]>([]);
+  const [calculationCategories, setCalculationCategories] = useState<DocumentCalculationCategoryItem[]>([]);
   const [isFormDataLoading, setIsFormDataLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
@@ -220,7 +230,10 @@ export default function HujjatlarPage() {
   const openCreateModal = () => {
     setEditingDocumentId(null);
     setFormError("");
-    setFormValues(getInitialFormValues());
+    setFormValues({
+      ...getInitialFormValues(),
+      calculation_category: calculationCategories[0]?.id ?? "",
+    });
     setStaffCounts({});
     setIsCreateModalOpen(true);
   };
@@ -229,6 +242,7 @@ export default function HujjatlarPage() {
     setEditingDocumentId(document.id);
     setFormError("");
     setFormValues({
+      calculation_category: document.calculation_category ?? calculationCategories[0]?.id ?? "",
       name: document.name ?? "",
       normative_type: document.normative_type ?? "",
       total_pages: Number(document.total_pages) || 1,
@@ -353,23 +367,30 @@ export default function HujjatlarPage() {
       setIsFormDataLoading(true);
       setFormError("");
       try {
-        const [normativeResponse, staffResponse] = await Promise.all([
+        const [normativeResponse, staffResponse, categoriesResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/normative-coefficients/`),
           fetch(`${API_BASE_URL}/staff-compositions/`),
+          fetch(`${API_BASE_URL}/document-calculation-categories/`),
         ]);
 
-        if (!normativeResponse.ok || !staffResponse.ok) {
+        if (!normativeResponse.ok || !staffResponse.ok || !categoriesResponse.ok) {
           throw new Error("Ma'lumotlarni yuklashda xatolik yuz berdi.");
         }
 
         const normativeData = (await normativeResponse.json()) as NormativeCoefficientItem[];
         const staffData = (await staffResponse.json()) as StaffCompositionItem[];
+        const categoryData = (await categoriesResponse.json()) as DocumentCalculationCategoryItem[];
 
         setNormativeOptions(normativeData);
         setStaffOptions(staffData);
+        setCalculationCategories(categoryData);
         setFormValues((prev) => ({
           ...prev,
           normative_type: prev.normative_type || normativeData[0]?.normative_type || "",
+          calculation_category:
+            editingDocumentId === null
+              ? (categoryData[0]?.id ?? "")
+              : (prev.calculation_category || categoryData[0]?.id || ""),
         }));
         setStaffCounts((prev) => {
           const next: Record<number, number> = {};
@@ -386,7 +407,7 @@ export default function HujjatlarPage() {
     };
 
     void loadCreateFormData();
-  }, [isCreateModalOpen]);
+  }, [isCreateModalOpen, editingDocumentId]);
 
   const onSubmitCreate = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -417,6 +438,8 @@ export default function HujjatlarPage() {
           name: formValues.name.trim(),
           total_pages: Number(formValues.total_pages) || 0,
           normative_type: formValues.normative_type,
+          calculation_category:
+            formValues.calculation_category === "" ? null : Number(formValues.calculation_category),
           document_category: formValues.document_category,
           complexity_level: formValues.complexity_level,
           is_research_required: formValues.is_research_required,
@@ -896,6 +919,26 @@ export default function HujjatlarPage() {
                     <h3 className="text-lg font-bold text-slate-800">Asosiy ma&apos;lumotlar</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
+                    <div className="md:col-span-3">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">Kategoriya</label>
+                      <select
+                        className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            calculation_category: event.target.value ? Number(event.target.value) : "",
+                          }))
+                        }
+                        value={formValues.calculation_category}
+                      >
+                        <option value="">Tanlanmagan</option>
+                        {calculationCategories.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="md:col-span-3">
                       <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat nomi</label>
                       <input
