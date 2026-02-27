@@ -1,72 +1,85 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import { Fragment, useEffect, useMemo, useState } from "react";
 
-type ReportItem = {
+type ReportRow = {
+  order: number;
   id: number;
   name: string;
-  total: string;
-  progressAmount: string;
-  plan2026: string;
-  deadline: string;
-  executor: string;
-  note: string;
+  total_amount: string;
+  completed_amount: string;
+  planned_amount: string;
+  development_deadline: string;
+  executor_organization: string;
+  notes: string;
 };
 
-const reportItems: ReportItem[] = [
-  {
-    id: 1,
-    name: "SHNQ 2.01.03 'Seysmik hududlarda qurilish' shaharsozlik normalari va qoidalari",
-    total: "600 755,15",
-    progressAmount: "600 755,15",
-    plan2026: "600 755,15",
-    deadline: "2026-yil III-chorak",
-    executor: "Texnik me'yorlash va standartlashtirish ilmiy-tadqiqot instituti",
-    note: "PF-6119 va PF-151 hujjatlari asosida",
-  },
-  {
-    id: 2,
-    name: "SHNQ 2.07.01 'Aholi punktlarini rivojlantirish va qurishni rejalashtirish'",
-    total: "600 755,15",
-    progressAmount: "600 755,15",
-    plan2026: "600 755,15",
-    deadline: "2026-yil III-chorak",
-    executor: "Texnik me'yorlash va standartlashtirish ilmiy-tadqiqot instituti",
-    note: "Vazirlar Mahkamasining 2024-yil 23-apreldagi 231-son qarori",
-  },
-  {
-    id: 3,
-    name: "SHNQ 'Obyektlarni ko'kalamzorlashtirish' shaharsozlik normalari va qoidalari",
-    total: "1 638 769,23",
-    progressAmount: "1 638 769,23",
-    plan2026: "1 638 769,23",
-    deadline: "2026-yil III-chorak",
-    executor: "Texnik me'yorlash va standartlashtirish ilmiy-tadqiqot instituti",
-    note: "Qurilish sohasini modernizatsiya qilish topshirig'i asosida",
-  },
-  {
-    id: 4,
-    name: "Sun'iy intellekt uchun shaharsozlik normlari va qoidalari bazasini yaratish",
-    total: "4 096 921,60",
-    progressAmount: "4 096 921,60",
-    plan2026: "4 096 921,60",
-    deadline: "2026-yil III-chorak",
-    executor: "Texnik me'yorlash va standartlashtirish ilmiy-tadqiqot instituti",
-    note: "Raqamlashtirish va AI yechimlari dasturiga muvofiq",
-  },
-  {
-    id: 5,
-    name: "SHNQ 2.01.17 'Fuqaro muhofazasida himoya inshootlari va favquloddagi holatlar'",
-    total: "1 311 014,79",
-    progressAmount: "1 311 014,79",
-    plan2026: "1 311 014,79",
-    deadline: "2026-yil III-chorak",
-    executor: "Toshkent arxitektura qurilish universiteti",
-    note: "O'zbekiston Respublikasi Bosh vazirining topshirig'i",
-  },
-];
+type ReportSection = {
+  category: string;
+  rows: ReportRow[];
+  totals: {
+    total_amount: string;
+    completed_amount: string;
+    planned_amount: string;
+  };
+};
+
+type ReportPayload = {
+  sections: ReportSection[];
+  summary: {
+    total_amount: string;
+    completed_amount: string;
+    planned_amount: string;
+    unallocated_limit: string;
+    grand_total: string;
+  };
+};
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
+
+const formatMoney = (value: string | number): string =>
+  new Intl.NumberFormat("uz-UZ", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+const emptySummary = {
+  total_amount: "0",
+  completed_amount: "0",
+  planned_amount: "0",
+  unallocated_limit: "0",
+  grand_total: "0",
+};
 
 export default function HisobotlarPage() {
+  const [report, setReport] = useState<ReportPayload | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadReport = async () => {
+      setIsLoading(true);
+      setError("");
+      try {
+        const response = await fetch(`${API_BASE_URL}/document-calculations/report-table/`);
+        if (!response.ok) {
+          throw new Error("Hisobot ma'lumotlarini yuklashda xatolik yuz berdi.");
+        }
+        const payload = (await response.json()) as ReportPayload;
+        setReport(payload);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Hisobot ma'lumotlari yuklanmadi.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    void loadReport();
+  }, []);
+
+  const sections = useMemo(() => report?.sections ?? [], [report]);
+  const summary = report?.summary ?? emptySummary;
+
   return (
     <div className="flex h-screen overflow-hidden bg-background-light text-slate-900">
       <AppSidebar active="hisobotlar" />
@@ -105,6 +118,12 @@ export default function HisobotlarPage() {
         </header>
 
         <section className="flex-1 overflow-y-auto px-4 py-5 md:px-6">
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-7">
             <div
               className="mx-auto max-w-[1240px] rounded-sm border border-slate-200 bg-[#fbfbfc] p-6 text-[11px] leading-[1.4] shadow-[0_1px_3px_rgba(15,23,42,0.08)] md:p-10"
@@ -176,27 +195,149 @@ export default function HisobotlarPage() {
                       <th className="border border-slate-600 px-2 py-2 text-left font-semibold">Ijrochi tashkilot</th>
                       <th className="border border-slate-600 px-2 py-2 text-left font-semibold">Izoh</th>
                     </tr>
-                    <tr className="bg-blue-50">
-                      <th className="border border-slate-600 px-2 py-2 text-center font-semibold text-blue-900" colSpan={8}>
-                        I. Bob. Shaharsozlik normalari va qoidalarini qayta ko&apos;rib chiqish va yangilarini ishlab chiqish
-                      </th>
-                    </tr>
                   </thead>
                   <tbody>
-                    {reportItems.map((item) => (
-                      <tr key={item.id} className="align-top">
-                        <td className="border border-slate-600 px-2 py-3 text-center">{item.id}</td>
-                        <td className="border border-slate-600 px-2 py-3">{item.name}</td>
-                        <td className="border border-slate-600 px-2 py-3 text-right font-semibold">{item.total}</td>
-                        <td className="border border-slate-600 px-2 py-3 text-right">{item.progressAmount}</td>
-                        <td className="border border-slate-600 px-2 py-3 text-right font-semibold">{item.plan2026}</td>
-                        <td className="border border-slate-600 px-2 py-3 text-center">{item.deadline}</td>
-                        <td className="border border-slate-600 px-2 py-3">{item.executor}</td>
-                        <td className="border border-slate-600 px-2 py-3 text-[10px] text-slate-600">{item.note}</td>
+                    {isLoading && (
+                      <tr>
+                        <td className="border border-slate-600 px-2 py-4 text-center text-slate-500" colSpan={8}>
+                          Hisobot ma&apos;lumotlari yuklanmoqda...
+                        </td>
                       </tr>
-                    ))}
+                    )}
+                    {!isLoading && sections.length === 0 && (
+                      <tr>
+                        <td className="border border-slate-600 px-2 py-4 text-center text-slate-500" colSpan={8}>
+                          Hozircha hisobot uchun ma&apos;lumot yo&apos;q.
+                        </td>
+                      </tr>
+                    )}
+                    {!isLoading &&
+                      sections.map((section, sectionIndex) => (
+                        <Fragment key={`${section.category}-${sectionIndex}`}>
+                          <tr className="bg-blue-50">
+                            <th
+                              className="border border-slate-600 px-2 py-2 text-center font-semibold text-blue-900"
+                              colSpan={8}
+                            >
+                              {section.category}
+                            </th>
+                          </tr>
+                          {section.rows.map((item) => (
+                            <tr key={`${section.category}-${item.id}`} className="align-top">
+                              <td className="border border-slate-600 px-2 py-3 text-center">{item.order}</td>
+                              <td className="border border-slate-600 px-2 py-3">{item.name}</td>
+                              <td className="border border-slate-600 px-2 py-3 text-right font-semibold">
+                                {formatMoney(item.total_amount)}
+                              </td>
+                              <td className="border border-slate-600 px-2 py-3 text-right">
+                                {formatMoney(item.completed_amount)}
+                              </td>
+                              <td className="border border-slate-600 px-2 py-3 text-right font-semibold">
+                                {formatMoney(item.planned_amount)}
+                              </td>
+                              <td className="border border-slate-600 px-2 py-3 text-center">
+                                {item.development_deadline || "-"}
+                              </td>
+                              <td className="border border-slate-600 px-2 py-3">
+                                {item.executor_organization || "-"}
+                              </td>
+                              <td className="border border-slate-600 px-2 py-3 text-[10px] text-slate-600">
+                                {item.notes || "-"}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr className="bg-slate-50 font-bold">
+                            <td className="border border-slate-600 px-2 py-2 text-right" colSpan={2}>
+                              Jami:
+                            </td>
+                            <td className="border border-slate-600 px-2 py-2 text-right">
+                              {formatMoney(section.totals.total_amount)}
+                            </td>
+                            <td className="border border-slate-600 px-2 py-2 text-right">
+                              {formatMoney(section.totals.completed_amount)}
+                            </td>
+                            <td className="border border-slate-600 px-2 py-2 text-right">
+                              {formatMoney(section.totals.planned_amount)}
+                            </td>
+                            <td className="border border-slate-600 px-2 py-2" colSpan={3} />
+                          </tr>
+                        </Fragment>
+                      ))}
+                    {!isLoading && sections.length > 0 && (
+                      <>
+                        <tr className="bg-white font-bold">
+                          <td className="border border-slate-600 px-2 py-2 text-right" colSpan={4}>
+                            Taqsimlanmagan limit
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2 text-right">
+                            {formatMoney(summary.unallocated_limit)}
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2" colSpan={3} />
+                        </tr>
+                        <tr className="bg-slate-50 font-bold">
+                          <td className="border border-slate-600 px-2 py-2 text-right" colSpan={2}>
+                            Jami boblar bo&apos;yicha
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2 text-right">
+                            {formatMoney(summary.total_amount)}
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2 text-right">
+                            {formatMoney(summary.completed_amount)}
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2 text-right">
+                            {formatMoney(summary.planned_amount)}
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2" colSpan={3} />
+                        </tr>
+                        <tr className="bg-white font-extrabold">
+                          <td className="border border-slate-600 px-2 py-2 text-right" colSpan={4}>
+                            HAMMASI
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2 text-right">
+                            {formatMoney(summary.grand_total)}
+                          </td>
+                          <td className="border border-slate-600 px-2 py-2" colSpan={3} />
+                        </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="mt-12 grid grid-cols-1 gap-10 text-center md:grid-cols-2 md:gap-14">
+                <div>
+                  <p className="mx-auto max-w-[420px] text-[12px] leading-[1.35] font-bold">
+                    Iqtisodiyot va moliya vazirligi Davlat rivojlantirish dasturlarini moliyalashtirish va
+                    infratuzilma jamg&apos;armalarini boshqarish sohasida budjet siyosati departamenti
+                  </p>
+                  <div className="mt-5">
+                    <div className="mx-auto w-[180px] border-b border-slate-700" />
+                  </div>
+                  <div className="mt-3 text-[11px] leading-none font-bold">
+                    <span>&quot;</span>
+                    <span className="mx-1 inline-block w-7 border-b border-slate-800 align-middle" />
+                    <span>&quot;</span>
+                    <span className="mx-1 inline-block w-28 border-b border-slate-800 align-middle" />
+                    <span>2026-yil</span>
+                  </div>
+                </div>
+                <div>
+                  <p className="mx-auto max-w-[320px] text-[12px] leading-[1.35] font-bold">
+                    Qurilish va uy-joy kommunal xo&apos;jaligi vazirligi moliya-iqtisod bo&apos;lim boshlig&apos;i
+                  </p>
+                  <div className="mt-5">
+                    <div className="mx-auto w-[180px] border-b border-slate-700 text-right text-[11px] font-bold">
+                      A.Salomov
+                    </div>
+                  </div>
+                  <div className="mt-3 text-[11px] leading-none font-bold">
+                    <span>&quot;</span>
+                    <span className="mx-1 inline-block w-7 border-b border-slate-800 align-middle" />
+                    <span>&quot;</span>
+                    <span className="mx-1 inline-block w-28 border-b border-slate-800 align-middle" />
+                    <span>2026-yil</span>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-14 flex flex-wrap items-center justify-between gap-3 text-[10px] text-slate-500">
@@ -231,4 +372,3 @@ export default function HisobotlarPage() {
     </div>
   );
 }
-
