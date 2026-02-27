@@ -4,6 +4,7 @@ from .views import (
     DashboardStatsAPIView,
     DocumentCalculationCategoryListAPIView,
     DocumentCalculationListCreateAPIView,
+    DocumentCalculationReportTableAPIView,
     DocumentCalculationRetrieveUpdateDestroyAPIView,
     DocumentCalculationXlsxImportAPIView,
     HealthCheckAPIView,
@@ -29,6 +30,11 @@ urlpatterns = [
         "document-calculations/import-xlsx/",
         DocumentCalculationXlsxImportAPIView.as_view(),
         name="document-calculations-import-xlsx",
+    ),
+    path(
+        "document-calculations/report-table/",
+        DocumentCalculationReportTableAPIView.as_view(),
+        name="document-calculations-report-table",
     ),
     path(
         "document-calculations/<int:pk>/",

@@ -49,10 +49,7 @@ export default function AppSidebar({ active }: AppSidebarProps) {
           <span className="material-symbols-outlined">bar_chart</span>
           <span className="text-sm font-medium">Hisobotlar</span>
         </Link>
-        <Link className={`${navItemBase} ${active === "baza_xlsx" ? navItemActive : ""}`} href="/baza_xlsx">
-          <span className="material-symbols-outlined">upload_file</span>
-          <span className="text-sm font-medium">Baza XLSX</span>
-        </Link>
+    
         <a className={navItemBase} href="#">
           <span className="material-symbols-outlined">settings</span>
           <span className="text-sm font-medium">Sozlamalar</span>

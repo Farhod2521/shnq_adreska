@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
@@ -132,6 +133,10 @@ def _to_decimal(value, default: Decimal = Decimal("0.00")) -> Decimal:
         return Decimal(normalized).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     except (InvalidOperation, ValueError):
         return default
+
+
+def _q2(value: Decimal) -> Decimal:
+    return value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
 
 class DocumentCalculationXlsxImportAPIView(APIView):
@@ -314,6 +319,93 @@ class DocumentCalculationXlsxImportAPIView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+
+
+class DocumentCalculationReportTableAPIView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        queryset = (
+            DocumentCalculation.objects.select_related("calculation_category")
+            .all()
+            .order_by("calculation_category__name", "id")
+        )
+
+        sections_by_name: dict[str, dict] = {}
+        sections: list[dict] = []
+        total_amount_all = Decimal("0.00")
+        completed_amount_all = Decimal("0.00")
+        planned_amount_all = Decimal("0.00")
+
+        for item in queryset:
+            category_name = (
+                item.calculation_category.name
+                if item.calculation_category and item.calculation_category.name
+                else "Kategoriyasiz"
+            )
+            if category_name not in sections_by_name:
+                section_obj = {
+                    "category": category_name,
+                    "rows": [],
+                    "totals": {
+                        "total_amount": Decimal("0.00"),
+                        "completed_amount": Decimal("0.00"),
+                        "planned_amount": Decimal("0.00"),
+                    },
+                }
+                sections_by_name[category_name] = section_obj
+                sections.append(section_obj)
+
+            planned_amount = _q2(item.final_total_amount - item.completed_amount)
+            section = sections_by_name[category_name]
+            order = len(section["rows"]) + 1
+            section["rows"].append(
+                {
+                    "order": order,
+                    "id": item.id,
+                    "name": item.name,
+                    "total_amount": _q2(item.final_total_amount),
+                    "completed_amount": _q2(item.completed_amount),
+                    "planned_amount": planned_amount,
+                    "development_deadline": item.development_deadline,
+                    "executor_organization": item.executor_organization,
+                    "notes": item.notes,
+                }
+            )
+
+            section["totals"]["total_amount"] += _q2(item.final_total_amount)
+            section["totals"]["completed_amount"] += _q2(item.completed_amount)
+            section["totals"]["planned_amount"] += planned_amount
+
+            total_amount_all += _q2(item.final_total_amount)
+            completed_amount_all += _q2(item.completed_amount)
+            planned_amount_all += planned_amount
+
+        for section in sections:
+            section["totals"]["total_amount"] = str(_q2(section["totals"]["total_amount"]))
+            section["totals"]["completed_amount"] = str(_q2(section["totals"]["completed_amount"]))
+            section["totals"]["planned_amount"] = str(_q2(section["totals"]["planned_amount"]))
+            for row in section["rows"]:
+                row["total_amount"] = str(_q2(row["total_amount"]))
+                row["completed_amount"] = str(_q2(row["completed_amount"]))
+                row["planned_amount"] = str(_q2(row["planned_amount"]))
+
+        total_limit = _to_decimal(os.getenv("REPORT_TOTAL_LIMIT"), default=Decimal("0.00"))
+        unallocated_limit = _q2(total_limit - planned_amount_all) if total_limit > planned_amount_all else Decimal("0.00")
+        grand_total = _q2(planned_amount_all + unallocated_limit)
+
+        payload = {
+            "sections": sections,
+            "summary": {
+                "total_amount": str(_q2(total_amount_all)),
+                "completed_amount": str(_q2(completed_amount_all)),
+                "planned_amount": str(_q2(planned_amount_all)),
+                "unallocated_limit": str(unallocated_limit),
+                "grand_total": str(grand_total),
+            },
+        }
+        return Response(payload, status=status.HTTP_200_OK)
 
 
 class DashboardStatsAPIView(APIView):
