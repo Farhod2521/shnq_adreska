@@ -60,6 +60,7 @@ type DocumentFormValues = {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 const FORMULA_MULTIPLIER = 2.3;
+const HIGH_AMOUNT_THRESHOLD = 2_472_000_000;
 
 type DocumentCalculationItem = {
   id: number;
@@ -727,7 +728,7 @@ export default function HujjatlarPage() {
                     <th className="px-6 py-4 text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Hujjat toifasi
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="w-[190px] px-6 py-4 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Umumiy narxi
                     </th>
                     <th className="px-6 py-4 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
@@ -753,14 +754,20 @@ export default function HujjatlarPage() {
                     </tr>
                   )}
                   {!isDocumentsLoading &&
-                    filteredDocuments.map((doc) => {
+                    filteredDocuments.map((doc, index) => {
                       const complexityInfo = complexityDisplayMap[doc.complexity_level] ?? {
                         label: doc.complexity_level,
                         className: "bg-slate-100 text-slate-700",
                       };
+                      const isHighAmount = toNumber(doc.final_total_amount) > HIGH_AMOUNT_THRESHOLD;
                       return (
-                        <tr key={doc.id} className="transition-colors hover:bg-slate-50">
-                          <td className="px-6 py-4 text-center text-sm font-medium text-slate-400">{doc.id}</td>
+                        <tr
+                          key={doc.id}
+                          className={`transition-colors ${
+                            isHighAmount ? "bg-red-50 hover:bg-red-100/70" : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <td className="px-6 py-4 text-center text-sm font-medium text-slate-400">{index + 1}</td>
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
                               {getNormativeTypeLabel(doc.normative_type)}
@@ -786,8 +793,9 @@ export default function HujjatlarPage() {
                               {categoryLabelMap[doc.document_category]}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-right text-sm font-bold text-slate-900">
-                            {formatMoney(toNumber(doc.final_total_amount))} UZS
+                          <td className="px-6 py-4 text-right text-sm font-bold whitespace-nowrap tabular-nums text-slate-900">
+                            <span>{formatMoney(toNumber(doc.final_total_amount))}</span>
+                            <span className="ml-1">UZS</span>
                           </td>
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
