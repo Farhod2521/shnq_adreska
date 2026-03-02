@@ -51,6 +51,7 @@ type DocumentFormValues = {
   name: string;
   normative_type: string;
   total_pages: number;
+  completed_amount: number;
   complexity_level: ComplexityLevel;
   document_category: DocumentCategory;
   is_research_required: boolean;
@@ -81,6 +82,8 @@ type DocumentCalculationItem = {
   staff_snapshot: StaffSnapshotItem[];
   staff_total_amount: string;
   final_total_amount: string;
+  completed_amount: string;
+  planned_amount: string;
   created_at: string;
   updated_at: string;
 };
@@ -154,6 +157,7 @@ const getInitialFormValues = (): DocumentFormValues => ({
   name: "",
   normative_type: "",
   total_pages: 1,
+  completed_amount: 0,
   complexity_level: "1",
   document_category: "new",
   is_research_required: false,
@@ -184,6 +188,8 @@ export default function HujjatlarPage() {
   const [showToast, setShowToast] = useState(false);
   const [formValues, setFormValues] = useState<DocumentFormValues>(getInitialFormValues());
   const [staffCounts, setStaffCounts] = useState<Record<number, number>>({});
+  const [isPlanSplitOpen, setIsPlanSplitOpen] = useState(false);
+  const [planned2026Percent, setPlanned2026Percent] = useState(100);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -237,6 +243,8 @@ export default function HujjatlarPage() {
       calculation_category: calculationCategories[0]?.id ?? "",
     });
     setStaffCounts({});
+    setPlanned2026Percent(100);
+    setIsPlanSplitOpen(false);
     setIsCreateModalOpen(true);
   };
 
@@ -248,6 +256,7 @@ export default function HujjatlarPage() {
       name: document.name ?? "",
       normative_type: document.normative_type ?? "",
       total_pages: Number(document.total_pages) || 1,
+      completed_amount: toNumber(document.completed_amount),
       complexity_level: document.complexity_level ?? "1",
       document_category: document.document_category ?? "new",
       is_research_required: Boolean(document.is_research_required),
@@ -260,6 +269,13 @@ export default function HujjatlarPage() {
       return acc;
     }, {});
     setStaffCounts(snapshotCounts);
+    const finalAmount = toNumber(document.final_total_amount);
+    const completedAmount = toNumber(document.completed_amount);
+    const remaining = Math.max(finalAmount - completedAmount, 0);
+    const planned2026Amount = toNumber(document.planned_amount);
+    const percent = remaining > 0 ? (planned2026Amount / remaining) * 100 : 100;
+    setPlanned2026Percent(Math.max(0, Math.min(100, Number(percent.toFixed(2)))));
+    setIsPlanSplitOpen(true);
     setIsCreateModalOpen(true);
   };
 
@@ -267,6 +283,8 @@ export default function HujjatlarPage() {
     setIsCreateModalOpen(false);
     setEditingDocumentId(null);
     setFormError("");
+    setIsPlanSplitOpen(false);
+    setPlanned2026Percent(100);
   };
 
   const openDeleteConfirm = (document: DocumentCalculationItem) => {
@@ -358,6 +376,11 @@ export default function HujjatlarPage() {
   const pageRatio =
     selectedBaseCoefficient > 0 ? toNumber(formValues.total_pages) / selectedBaseCoefficient : 0;
   const finalTotalAmount = staffTotalAmount * pageRatio * selectedComplexityCoefficient * FORMULA_MULTIPLIER;
+  const normalizedCompletedAmount = Math.min(Math.max(toNumber(formValues.completed_amount), 0), finalTotalAmount);
+  const plannedTotalAmount = Math.max(finalTotalAmount - normalizedCompletedAmount, 0);
+  const planned2026Amount = (plannedTotalAmount * planned2026Percent) / 100;
+  const planned2027Percent = Math.max(0, 100 - planned2026Percent);
+  const planned2027Amount = Math.max(plannedTotalAmount - planned2026Amount, 0);
   const researchCoefficient = formValues.is_research_required ? 1.4 : 1.0;
 
   useEffect(() => {
@@ -451,6 +474,8 @@ export default function HujjatlarPage() {
           staff_counts: Object.fromEntries(
             Object.entries(staffCounts).map(([key, value]) => [key, Number(value) || 0])
           ),
+          completed_amount: Number(normalizedCompletedAmount.toFixed(2)),
+          planned_amount: Number(planned2026Amount.toFixed(2)),
         }),
       });
 
@@ -1282,6 +1307,111 @@ export default function HujjatlarPage() {
                   <p className="mt-4 text-xs text-slate-500">
                     Formula: ish_haqi_jami * (sahifa_soni / bet_soni) * murakkablik_darajasi * 2.3
                   </p>
+
+                  <div className="mt-5 rounded-xl border border-primary/20 bg-white">
+                    <button
+                      className="flex w-full items-center justify-between px-4 py-3 text-left"
+                      onClick={() => setIsPlanSplitOpen((prev) => !prev)}
+                      type="button"
+                    >
+                      <span className="text-sm font-bold text-primary">Rejalashtirilgan summalar taqsimoti</span>
+                      <span className="material-symbols-outlined text-primary">
+                        {isPlanSplitOpen ? "remove" : "add"}
+                      </span>
+                    </button>
+
+                    {isPlanSplitOpen && (
+                      <div className="grid grid-cols-1 gap-4 border-t border-primary/15 p-4 md:grid-cols-2">
+                        <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <label className="block text-xs font-bold tracking-wide text-slate-600 uppercase">
+                            01.01.2026 holatiga bajarilgan summa
+                          </label>
+                          <div className="relative">
+                            <input
+                              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 pr-12 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              min={0}
+                              onChange={(event) =>
+                                setFormValues((prev) => ({
+                                  ...prev,
+                                  completed_amount: Number(event.target.value) || 0,
+                                }))
+                              }
+                              step="0.01"
+                              type="number"
+                              value={formValues.completed_amount}
+                            />
+                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-slate-500">so&apos;m</span>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            Yakuniy summa: <span className="font-semibold text-slate-700">{formatMoney(finalTotalAmount)} so&apos;m</span>
+                          </p>
+                        </div>
+
+                        <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                          <label className="block text-xs font-bold tracking-wide text-slate-600 uppercase">
+                            2026-yil ulushi (%)
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="mb-1 text-xs font-semibold text-slate-600">2026</p>
+                              <div className="relative">
+                                <input
+                                  className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 pr-8 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                  max={100}
+                                  min={0}
+                                  onChange={(event) => {
+                                    const value = Math.max(
+                                      0,
+                                      Math.min(100, Number(event.target.value) || 0)
+                                    );
+                                    setPlanned2026Percent(value);
+                                  }}
+                                  step="0.01"
+                                  type="number"
+                                  value={planned2026Percent}
+                                />
+                                <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-slate-500">%</span>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="mb-1 text-xs font-semibold text-slate-600">2027</p>
+                              <div className="flex h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-slate-700">
+                                {planned2027Percent.toFixed(2)}%
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                          <p className="text-xs font-bold tracking-wide text-blue-800 uppercase">
+                            2026-yilga rejalashtirilgan (planned_amount)
+                          </p>
+                          <p className="mt-2 text-lg font-bold text-blue-900">
+                            {formatMoney(planned2026Amount)} so&apos;m
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg border border-slate-200 bg-white p-4">
+                          <p className="text-xs font-bold tracking-wide text-slate-600 uppercase">
+                            2027-yilga rejalashtirilgan
+                          </p>
+                          <p className="mt-2 text-lg font-bold text-slate-900">
+                            {formatMoney(planned2027Amount)} so&apos;m
+                          </p>
+                        </div>
+
+                        <div className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-2">
+                          <p className="text-xs text-slate-500">
+                            Formula: <span className="font-semibold text-slate-700">planned_total = final_total_amount - completed_amount</span>
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Tizimga yuboriladi: <span className="font-semibold text-slate-700">completed_amount</span> va{" "}
+                            <span className="font-semibold text-slate-700">planned_amount (2026)</span>.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </section>
 
                 <div className="flex items-center justify-end gap-4 pt-2">
