@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import AppLoadingState from "@/components/AppLoadingState";
 import { useEffect, useRef, useState } from "react";
 
 type StaffSnapshotItem = {
@@ -740,7 +741,11 @@ export default function HujjatlarPage() {
                   {isDocumentsLoading && (
                     <tr>
                       <td className="px-6 py-6 text-sm text-slate-500" colSpan={7}>
-                        Hujjatlar yuklanmoqda...
+                        <AppLoadingState
+                          compact
+                          subtitle="Ro'yxat backenddan olinmoqda."
+                          title="Hujjatlar yuklanmoqda"
+                        />
                       </td>
                     </tr>
                   )}
@@ -910,9 +915,12 @@ export default function HujjatlarPage() {
                 onSubmit={onSubmitCreate}
               >
                 {isFormDataLoading && (
-                  <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500">
-                    Ma&apos;lumotlar yuklanmoqda...
-                  </div>
+                  <AppLoadingState
+                    className="rounded-lg border border-slate-200 bg-white"
+                    compact
+                    subtitle="Normativlar va xodimlar ma'lumotlari olinmoqda."
+                    title="Ma&apos;lumotlar yuklanmoqda"
+                  />
                 )}
                 {formError && (
                   <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
