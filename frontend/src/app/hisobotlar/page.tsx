@@ -81,6 +81,62 @@ export default function HisobotlarPage() {
   const sections = useMemo(() => report?.sections ?? [], [report]);
   const summary = report?.summary ?? emptySummary;
 
+  const getInlineStyledReportHtml = () => {
+    if (!wordExportRef.current) {
+      return "";
+    }
+
+    const sourceRoot = wordExportRef.current;
+    const clonedRoot = sourceRoot.cloneNode(true) as HTMLElement;
+    const sourceNodes = [sourceRoot, ...Array.from(sourceRoot.querySelectorAll<HTMLElement>("*"))];
+    const clonedNodes = [clonedRoot, ...Array.from(clonedRoot.querySelectorAll<HTMLElement>("*"))];
+
+    sourceNodes.forEach((sourceNode, index) => {
+      const clonedNode = clonedNodes[index];
+      if (!clonedNode) {
+        return;
+      }
+
+      const computedStyle = window.getComputedStyle(sourceNode);
+      const styleText = Array.from(computedStyle)
+        .map((prop) => `${prop}:${computedStyle.getPropertyValue(prop)};`)
+        .join("");
+
+      clonedNode.setAttribute("style", styleText);
+      clonedNode.removeAttribute("class");
+
+      if (sourceNode.classList.contains("overflow-x-auto")) {
+        clonedNode.style.overflow = "visible";
+      }
+
+      if (sourceNode.classList.contains("md:grid-cols-2")) {
+        clonedNode.style.display = "grid";
+        clonedNode.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
+      }
+
+      if (sourceNode.classList.contains("md:gap-12")) {
+        clonedNode.style.gap = "3rem";
+      }
+
+      if (sourceNode.classList.contains("md:gap-14")) {
+        clonedNode.style.gap = "3.5rem";
+      }
+
+      if (sourceNode.tagName === "TABLE") {
+        clonedNode.style.width = "100%";
+        clonedNode.style.minWidth = "0";
+        clonedNode.style.tableLayout = "fixed";
+      }
+    });
+
+    clonedRoot.style.maxWidth = "none";
+    clonedRoot.style.width = "100%";
+    clonedRoot.style.margin = "0";
+    clonedRoot.style.boxShadow = "none";
+
+    return clonedRoot.outerHTML;
+  };
+
   const handleDownloadWord = () => {
     if (!wordExportRef.current) {
       return;
@@ -118,7 +174,14 @@ export default function HisobotlarPage() {
       return;
     }
 
-    const reportHtml = wordExportRef.current.outerHTML;
+    const reportHtml = getInlineStyledReportHtml();
+    if (!reportHtml) {
+      return;
+    }
+
+    const styles = Array.from(document.querySelectorAll('style, link[rel="stylesheet"]'))
+      .map((node) => node.outerHTML)
+      .join("\n");
     const printWindow = window.open("", "_blank", "width=1200,height=900");
     if (!printWindow) {
       return;
@@ -130,11 +193,35 @@ export default function HisobotlarPage() {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hisobot</title>
+  ${styles}
   <style>
-    body { font-family: "Times New Roman", Times, serif; margin: 0; padding: 10mm; color: #0f172a; background: #fff; }
+    html, body { margin: 0; padding: 0; color: #0f172a; background: #fff; }
+    body { padding: 6mm; }
+    .print-root {
+      width: 100%;
+      margin: 0 auto;
+    }
+    .print-root > div {
+      max-width: none !important;
+      width: 100% !important;
+      margin: 0 !important;
+      box-shadow: none !important;
+      padding: 4mm !important;
+    }
+    .print-root table,
+    .print-root tr,
+    .print-root th,
+    .print-root td {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    @page { size: A4 landscape; margin: 8mm; }
+    @media print {
+      body { padding: 0; }
+    }
   </style>
 </head>
-<body>${reportHtml}</body>
+<body><div class="print-root">${reportHtml}</div></body>
 </html>`);
     printWindow.document.close();
     printWindow.onload = () => {

@@ -48,8 +48,12 @@ const typeTitleMap: Record<string, string> = {
   technical_regulation: "Texnik reglament",
   shnq: "SHNQ",
   eurocode: "Eurocode",
-  standard_srn_qr_mqn: "Standart/SRN/QR/MQN",
+  standard: "Standard",
+  srn: "SRN",
+  qr: "QR",
+  mqn: "MQN",
   methodical_guide: "Metodika",
+  standard_srn_qr_mqn: "Standart/SRN/QR/MQN",
 };
 
 const categoryLabelMap: Record<string, string> = {
@@ -63,8 +67,45 @@ const colorByType: Record<string, string> = {
   shnq: "#1f2b8f",
   technical_regulation: "#4f46d6",
   eurocode: "#15a8c8",
-  standard_srn_qr_mqn: "#0f766e",
+  standard: "#64748b",
+  srn: "#7c3aed",
+  qr: "#0f766e",
+  mqn: "#334155",
   methodical_guide: "#ca8a04",
+  standard_srn_qr_mqn: "#0f766e",
+};
+
+const dashboardTypeOrder = [
+  "technical_regulation",
+  "shnq",
+  "eurocode",
+  "standard",
+  "srn",
+  "qr",
+  "mqn",
+  "methodical_guide",
+];
+
+const cardStyleByType: Record<string, string> = {
+  technical_regulation: "bg-blue-100 text-blue-600",
+  shnq: "bg-indigo-100 text-indigo-600",
+  eurocode: "bg-cyan-100 text-cyan-600",
+  standard: "bg-slate-100 text-slate-600",
+  srn: "bg-violet-100 text-violet-600",
+  qr: "bg-emerald-100 text-emerald-600",
+  mqn: "bg-slate-200 text-slate-700",
+  methodical_guide: "bg-amber-100 text-amber-600",
+};
+
+const iconByType: Record<string, string> = {
+  technical_regulation: "description",
+  shnq: "article",
+  eurocode: "language",
+  standard: "book_2",
+  srn: "rule",
+  qr: "fact_check",
+  mqn: "menu_book",
+  methodical_guide: "menu_book",
 };
 
 const getTrendPaths = (points: DashboardTrendPoint[]) => {
@@ -119,7 +160,7 @@ export default function DashboardPage() {
 
   const typeMap = useMemo(() => new Map((stats?.types ?? []).map((item) => [item.normative_type, item])), [stats]);
 
-  const cardTypes = ["technical_regulation", "shnq", "eurocode"].map((key) => {
+  const cardTypes = dashboardTypeOrder.map((key) => {
     const item = typeMap.get(key);
     return {
       key,
@@ -201,41 +242,7 @@ export default function DashboardPage() {
           )}
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {cardTypes.map((card, idx) => (
-              <div
-                key={card.key}
-                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div
-                    className={`flex size-12 items-center justify-center rounded-lg ${
-                      idx === 0
-                        ? "bg-blue-100 text-blue-600"
-                        : idx === 1
-                          ? "bg-indigo-100 text-indigo-600"
-                          : "bg-cyan-100 text-cyan-600"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-2xl">
-                      {idx === 0 ? "description" : idx === 1 ? "article" : "language"}
-                    </span>
-                  </div>
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
-                    +{card.month} shu oy
-                  </span>
-                </div>
-                <h3 className="mb-1 text-sm font-medium text-slate-600">{card.title}</h3>
-                <p className="mb-2 text-2xl font-bold">
-                  {isLoading ? "..." : card.count} <span className="text-sm font-normal text-slate-400">ta hujjat</span>
-                </p>
-                <div className="border-t border-slate-100 pt-4">
-                  <p className="mb-1 text-xs text-slate-500">Umumiy qiymat</p>
-                  <p className="text-sm font-semibold text-primary">{formatMoney(card.amount)} so&apos;m</p>
-                </div>
-              </div>
-            ))}
-
-            <div className="rounded-xl border border-primary bg-primary p-6 text-white shadow-lg transition-shadow hover:shadow-xl">
+            <div className="rounded-xl border border-primary bg-primary p-6 text-white shadow-lg transition-shadow hover:shadow-xl md:col-span-2 xl:col-span-4">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex size-12 items-center justify-center rounded-lg bg-white/20 text-white">
                   <span className="material-symbols-outlined text-2xl">bar_chart_4_bars</span>
@@ -264,6 +271,36 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
+
+            {cardTypes.map((card) => (
+              <div
+                key={card.key}
+                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <div
+                    className={`flex size-12 items-center justify-center rounded-lg ${
+                      cardStyleByType[card.key] ?? "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-2xl">
+                      {iconByType[card.key] ?? "description"}
+                    </span>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">
+                    +{card.month} shu oy
+                  </span>
+                </div>
+                <h3 className="mb-1 text-sm font-medium text-slate-600">{card.title}</h3>
+                <p className="mb-2 text-2xl font-bold">
+                  {isLoading ? "..." : card.count} <span className="text-sm font-normal text-slate-400">ta hujjat</span>
+                </p>
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="mb-1 text-xs text-slate-500">Umumiy qiymat</p>
+                  <p className="text-sm font-semibold text-primary">{formatMoney(card.amount)} so&apos;m</p>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
