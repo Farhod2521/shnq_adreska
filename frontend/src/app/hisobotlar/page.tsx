@@ -1,6 +1,7 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import AppLoadingState from "@/components/AppLoadingState";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 type ReportRow = {
@@ -346,7 +347,11 @@ export default function HisobotlarPage() {
                     {isLoading && (
                       <tr>
                         <td className="border border-slate-600 px-2 py-4 text-center text-slate-500" colSpan={8}>
-                          Hisobot ma&apos;lumotlari yuklanmoqda...
+                          <AppLoadingState
+                            compact
+                            subtitle="Hisobot jadvali backenddan olinmoqda."
+                            title="Hisobot ma&apos;lumotlari yuklanmoqda"
+                          />
                         </td>
                       </tr>
                     )}

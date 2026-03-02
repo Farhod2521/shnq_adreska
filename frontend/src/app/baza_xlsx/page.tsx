@@ -1,6 +1,7 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import AppLoadingState from "@/components/AppLoadingState";
 import { useState } from "react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
@@ -101,6 +102,14 @@ export default function BazaXlsxPage() {
                 <span className="material-symbols-outlined text-[18px]">upload</span>
                 {isUploading ? "Yuklanmoqda..." : "XLSX yuklash"}
               </button>
+
+              {isUploading && (
+                <AppLoadingState
+                  compact
+                  subtitle="XLSX fayldagi satrlar tekshirilmoqda va saqlanmoqda."
+                  title="Import jarayoni davom etmoqda"
+                />
+              )}
             </div>
 
             {error && (
