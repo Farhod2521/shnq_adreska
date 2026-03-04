@@ -89,30 +89,126 @@ type DocumentCalculationItem = {
 };
 
 const printCss = `
+  :root{
+    color-scheme:light;
+  }
+  *{
+    box-sizing:border-box;
+  }
+  html,body{
+    margin:0;
+    padding:0;
+  }
   body{
-    font-family:Inter,Arial,sans-serif;
+    font-family:"Times New Roman",Inter,Arial,sans-serif;
     background:#ffffff;
     color:#0f172a;
-    margin:0;
-    padding:12px;
+    padding:8mm;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
   }
   .document-sheet{
-    width:210mm;
-    min-height:297mm;
+    width:100%;
+    max-width:194mm;
     margin:0 auto;
+    min-height:auto;
     background:#ffffff;
-    border:1px solid #e2e8f0;
-    box-shadow:none;
+    border:1px solid #dbe1ea;
     border-radius:0;
+    box-shadow:none;
+    padding:8mm 9mm !important;
+    font-size:11.5px;
+    line-height:1.28;
   }
-  .no-print{display:none !important}
+  .document-sheet .material-symbols-outlined{
+    display:none !important;
+  }
+  .document-sheet img{
+    height:72px !important;
+    width:auto;
+  }
+  .document-sheet h1,
+  .document-sheet h2{
+    margin:0 !important;
+    font-size:12px !important;
+    line-height:1.25 !important;
+  }
+  .document-sheet h4{
+    margin:0 !important;
+    font-size:14px !important;
+    line-height:1.3 !important;
+  }
+  .document-sheet .mb-8{
+    margin-bottom:12px !important;
+  }
+  .document-sheet .mt-11{
+    margin-top:14px !important;
+  }
+  .document-sheet .p-4{
+    padding:8px !important;
+  }
+  .document-sheet .p-3{
+    padding:7px !important;
+  }
+  .document-sheet .p-2{
+    padding:5px !important;
+  }
+  .document-sheet .pt-6{
+    padding-top:8px !important;
+  }
+  .document-sheet .pb-2{
+    padding-bottom:4px !important;
+  }
+  .document-sheet .text-\\[13px\\]{
+    font-size:11px !important;
+  }
+  .document-sheet .text-sm{
+    font-size:11px !important;
+  }
+  .document-sheet .text-xs{
+    font-size:10px !important;
+  }
+  .document-sheet .overflow-x-auto{
+    overflow:visible !important;
+  }
+  .document-sheet table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    page-break-inside:auto;
+  }
+  .document-sheet th,
+  .document-sheet td{
+    word-break:break-word;
+    page-break-inside:avoid;
+  }
+  .document-sheet .min-w-\\[200px\\]{
+    min-width:130px !important;
+  }
+  .no-print{
+    display:none !important;
+  }
   @media print{
-    body{padding:0}
-    .document-sheet{margin:0 auto;border:none}
+    html,body{
+      width:210mm;
+      height:297mm;
+    }
+    body{
+      margin:0;
+      padding:0;
+    }
+    .document-sheet{
+      width:100%;
+      max-width:none;
+      margin:0;
+      border:none;
+      padding:9mm 10mm !important;
+      page-break-inside:avoid;
+    }
   }
   @page{
-    size:A4;
-    margin:10mm;
+    size:A4 portrait;
+    margin:0;
   }
 `;
 
@@ -556,14 +652,22 @@ export default function HujjatlarPage() {
         <title>Hisob-kitob hujjati</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
         <style>${printCss}</style>
       </head>
       <body>${docHtml}</body>
       </html>`);
     printWindow.document.close();
     printWindow.onload = () => {
-      printWindow.focus();
-      setTimeout(() => printWindow.print(), 250);
+      const triggerPrint = () => {
+        printWindow.focus();
+        setTimeout(() => printWindow.print(), 120);
+      };
+      if (printWindow.document.fonts) {
+        printWindow.document.fonts.ready.then(triggerPrint);
+        return;
+      }
+      setTimeout(triggerPrint, 350);
     };
   };
 
@@ -581,6 +685,7 @@ export default function HujjatlarPage() {
         <title>Hisob-kitob hujjati</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" />
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,400,0,0" />
         <style>${printCss}</style>
       </head>
       <body>${docHtml}</body>
@@ -734,38 +839,38 @@ export default function HujjatlarPage() {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_45px_-28px_rgba(15,23,42,0.45)]">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left">
+              <table className="w-full min-w-[1160px] border-separate [border-spacing:0_10px] text-left">
                 <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="w-12 px-6 py-4 text-center text-xs font-bold tracking-wider text-slate-500 uppercase">
+                  <tr>
+                    <th className="w-12 px-4 py-3 text-center text-xs font-bold tracking-wider text-slate-500 uppercase">
                       №
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Hujjat turi
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Hujjat nomi
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Murakkablik
                     </th>
-                    <th className="px-6 py-4 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Hujjat toifasi
                     </th>
-                    <th className="w-[190px] px-6 py-4 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="w-[210px] px-4 py-3 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Umumiy narxi
                     </th>
-                    <th className="px-6 py-4 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="px-4 py-3 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
                       Harakatlar
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200">
+                <tbody className="[&>tr>td:first-child]:rounded-l-xl [&>tr>td:last-child]:rounded-r-xl">
                   {isDocumentsLoading && (
                     <tr>
-                      <td className="px-6 py-6 text-sm text-slate-500" colSpan={7}>
+                      <td className="rounded-xl bg-slate-50 px-6 py-6 text-sm text-slate-500" colSpan={7}>
                         <AppLoadingState
                           compact
                           subtitle="Ro'yxat backenddan olinmoqda."
@@ -776,7 +881,7 @@ export default function HujjatlarPage() {
                   )}
                   {!isDocumentsLoading && filteredDocuments.length === 0 && (
                     <tr>
-                      <td className="px-6 py-6 text-sm text-slate-500" colSpan={7}>
+                      <td className="rounded-xl bg-slate-50 px-6 py-6 text-sm text-slate-500" colSpan={7}>
                         {searchQuery.trim() || selectedNormativeTypeFilter
                           ? "Mos hujjat topilmadi."
                           : "Hozircha saqlangan hujjatlar yo&apos;q."}
@@ -793,71 +898,73 @@ export default function HujjatlarPage() {
                       return (
                         <tr
                           key={doc.id}
-                          className={`transition-colors ${
-                            isHighAmount ? "bg-red-50 hover:bg-red-100/70" : "hover:bg-slate-50"
+                          className={`group transition-colors ${
+                            isHighAmount
+                              ? "[&>td]:bg-red-50 [&>td]:text-red-950 [&>td]:shadow-[inset_0_0_0_1px_rgba(239,68,68,0.22)] hover:[&>td]:bg-red-100/70"
+                              : "[&>td]:bg-slate-100/70 hover:[&>td]:bg-slate-200/80"
                           }`}
                         >
-                          <td className="px-6 py-4 text-center text-sm font-medium text-slate-400">{index + 1}</td>
-                          <td className="px-6 py-4">
-                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                          <td className="px-4 py-4 text-center text-sm font-medium text-slate-500">{index + 1}</td>
+                          <td className="px-4 py-4">
+                            <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-primary shadow-[inset_0_0_0_1px_rgba(26,34,127,0.16)]">
                               {getNormativeTypeLabel(doc.normative_type)}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-4">
                             <div className="flex flex-col">
-                              <span className="mb-1 text-sm leading-tight font-semibold text-slate-900">
+                              <span className="mb-1 max-w-[44ch] truncate text-sm leading-tight font-semibold text-slate-900">
                                 {doc.name}
                               </span>
-                              <span className="font-mono text-xs text-slate-500">ID: #{doc.id}</span>
+                              <span className="font-mono text-[11px] text-slate-500">ID: #{doc.id}</span>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-4 py-4">
                             <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${complexityInfo.className}`}
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold shadow-[inset_0_0_0_1px_rgba(148,163,184,0.22)] ${complexityInfo.className}`}
                             >
                               {complexityInfo.label}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <span className="text-sm text-slate-700">
+                          <td className="px-4 py-4">
+                            <span className="inline-block max-w-[24ch] truncate text-sm leading-snug text-slate-700">
                               {categoryLabelMap[doc.document_category]}
                             </span>
                           </td>
-                          <td className="px-6 py-4 text-right text-sm font-bold whitespace-nowrap tabular-nums text-slate-900">
+                          <td className="px-4 py-4 text-right text-sm font-bold whitespace-nowrap tabular-nums text-slate-900">
                             <span>{formatMoney(toNumber(doc.final_total_amount))}</span>
                             <span className="ml-1">UZS</span>
                           </td>
-                          <td className="px-6 py-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
+                          <td className="px-4 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
                               <button
-                                className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10"
+                                className="rounded-lg bg-white p-2 text-primary shadow-[inset_0_0_0_1px_rgba(26,34,127,0.16)] transition-all hover:-translate-y-0.5 hover:bg-primary/5"
                                 onClick={() => openModal(doc)}
                                 title="Hujjatni ko'rish"
                                 type="button"
                               >
-                                <span className="material-symbols-outlined text-xl">visibility</span>
+                                <span className="material-symbols-outlined text-[20px]">visibility</span>
                               </button>
                               <button
-                                className="rounded-md p-1.5 text-indigo-600 transition-colors hover:bg-indigo-50"
+                                className="rounded-lg bg-white p-2 text-indigo-600 shadow-[inset_0_0_0_1px_rgba(79,70,229,0.16)] transition-all hover:-translate-y-0.5 hover:bg-indigo-50"
                                 onClick={() => openEditModal(doc)}
                                 title="Hujjatni tahrirlash"
                                 type="button"
                               >
-                                <span className="material-symbols-outlined text-xl">edit</span>
+                                <span className="material-symbols-outlined text-[20px]">edit</span>
                               </button>
                               <button
-                                className="rounded-md p-1.5 text-red-600 transition-colors hover:bg-red-50"
+                                className="rounded-lg bg-white p-2 text-red-600 shadow-[inset_0_0_0_1px_rgba(220,38,38,0.16)] transition-all hover:-translate-y-0.5 hover:bg-red-50"
                                 onClick={() => openDeleteConfirm(doc)}
                                 title="Hujjatni o'chirish"
                                 type="button"
                               >
-                                <span className="material-symbols-outlined text-xl">delete</span>
+                                <span className="material-symbols-outlined text-[20px]">delete</span>
                               </button>
                               <button
-                                className="rounded-md p-1.5 text-slate-500 transition-colors hover:bg-slate-100"
+                                className="rounded-lg bg-white p-2 text-slate-500 shadow-[inset_0_0_0_1px_rgba(100,116,139,0.18)] transition-all hover:-translate-y-0.5 hover:bg-slate-100"
                                 type="button"
                               >
-                                <span className="material-symbols-outlined text-xl">download</span>
+                                <span className="material-symbols-outlined text-[20px]">download</span>
                               </button>
                             </div>
                           </td>
@@ -868,7 +975,7 @@ export default function HujjatlarPage() {
               </table>
             </div>
 
-            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
+            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-6 py-4">
               <p className="text-sm text-slate-500">
                 {filteredDocuments.length} ta ko&apos;rsatilmoqda (Jami {documents.length} ta)
               </p>
@@ -1536,7 +1643,7 @@ export default function HujjatlarPage() {
               <div className="mx-auto max-w-[1000px] rounded-2xl bg-slate-100/60 p-4 shadow-inner">
                 <div
                   ref={printRef}
-                  className="document-sheet mx-auto w-full max-w-[860px] border border-slate-200 bg-white px-7 py-8 text-[13px] leading-relaxed shadow-[0_20px_60px_-25px_rgba(15,23,42,0.45)] md:px-10"
+                  className="document-sheet mx-auto w-full max-w-[794px] border border-slate-200 bg-white px-6 py-6 text-[12px] leading-[1.42] shadow-[0_20px_60px_-25px_rgba(15,23,42,0.45)] md:px-8"
                 >
              
 
@@ -1570,8 +1677,7 @@ export default function HujjatlarPage() {
                   </div>
 
                   <div className="mb-8 rounded-xl border border-slate-200 p-4">
-                    <h3 className="mb-4 flex items-center text-sm font-bold tracking-wider text-primary uppercase">
-                      <span className="material-symbols-outlined mr-2 text-lg">table_view</span>
+                    <h3 className="mb-4 text-sm font-bold tracking-wider text-primary uppercase">
                       Ish haqi
                     </h3>
                     <div className="overflow-x-auto">
@@ -1619,8 +1725,7 @@ export default function HujjatlarPage() {
                   </div>
 
                   <div className="mb-8 rounded-xl border border-slate-200 p-4">
-                    <h3 className="mb-4 flex items-center text-sm font-bold tracking-wider text-primary uppercase">
-                      <span className="material-symbols-outlined mr-2 text-lg">calculate</span>
+                    <h3 className="mb-4 text-sm font-bold tracking-wider text-primary uppercase">
                       Xarajatlar yakuni
                     </h3>
                     <div className="overflow-x-auto">
