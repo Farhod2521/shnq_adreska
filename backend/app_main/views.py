@@ -515,15 +515,20 @@ class DashboardStatsAPIView(APIView):
         return Response(payload, status=status.HTTP_200_OK)
 
 
+BOLD_PLACEHOLDERS = {"shnq_name"}
+
 def _fill_paragraph(para, placeholders: dict):
     """Paragraph ichidagi placeholder'larni to'ldiradi (split run muammosini hal qiladi)."""
     full_text = "".join(run.text for run in para.runs)
     if not any(f"{{{{{k}}}}}" in full_text for k in placeholders):
         return
+    needs_bold = any(f"{{{{{k}}}}}" in full_text for k in BOLD_PLACEHOLDERS)
     for key, value in placeholders.items():
         full_text = full_text.replace(f"{{{{{key}}}}}", str(value))
     for i, run in enumerate(para.runs):
         run.text = full_text if i == 0 else ""
+        if i == 0 and needs_bold:
+            run.bold = True
 
 
 def _fill_docx(template_path: str, placeholders: dict) -> io.BytesIO:
