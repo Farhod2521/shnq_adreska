@@ -980,7 +980,6 @@ export default function HujjatlarPage() {
                               {doc.name}
                             </p>
                             <div className="mt-1 flex items-center gap-2">
-                              <p className="font-mono text-[11px] text-slate-400">ID: #{doc.id}</p>
                               <button
                                 className="flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[11px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100"
                                 onClick={() => openContractModal(doc)}
