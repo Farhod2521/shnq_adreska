@@ -4,6 +4,7 @@ from .models import (
     DocumentCalculation,
     DocumentCalculationCategory,
     NormativeCoefficient,
+    OrganizationSettings,
     StaffComposition,
 )
 
@@ -144,3 +145,10 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
         instance.recalculate_final_total_amount()
         instance.save()
         return instance
+
+
+class OrganizationSettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrganizationSettings
+        fields = ["institute_director", "deputy_minister", "economics_head", "updated_at"]
+        read_only_fields = ["updated_at"]

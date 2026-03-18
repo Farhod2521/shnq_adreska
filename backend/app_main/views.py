@@ -22,6 +22,7 @@ from .models import (
     DocumentCalculation,
     DocumentCalculationCategory,
     NormativeCoefficient,
+    OrganizationSettings,
     StaffComposition,
 )
 from .serializers import (
@@ -30,6 +31,7 @@ from .serializers import (
     DocumentCalculationSerializer,
     HealthCheckSerializer,
     NormativeCoefficientSerializer,
+    OrganizationSettingsSerializer,
     StaffCompositionSerializer,
 )
 
@@ -645,7 +647,10 @@ class DocumentContractAPIView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        org = OrganizationSettings.get_instance()
+
         placeholders = {
+            # Hujjat ma'lumotlari
             "shnq_name": doc.name,
             "doc_id": str(doc.id),
             "normative_type": doc.normative_type,
@@ -657,6 +662,10 @@ class DocumentContractAPIView(APIView):
             "notes": doc.notes or "",
             "final_total_amount": str(doc.final_total_amount),
             "created_at": doc.created_at.strftime("%d.%m.%Y") if doc.created_at else "",
+            # Tashkilot sozlamalari
+            "institute_director": org.institute_director,
+            "deputy_minister": org.deputy_minister,
+            "economics_head": org.economics_head,
         }
 
         buf = _fill_docx(template_path, placeholders)
@@ -670,3 +679,21 @@ class DocumentContractAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class OrganizationSettingsAPIView(APIView):
+    """GET — sozlamalarni olish, PUT — yangilash."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        obj = OrganizationSettings.get_instance()
+        return Response(OrganizationSettingsSerializer(obj).data)
+
+    def put(self, request):
+        obj = OrganizationSettings.get_instance()
+        serializer = OrganizationSettingsSerializer(obj, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
