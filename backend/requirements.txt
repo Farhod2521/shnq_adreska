@@ -7,3 +7,4 @@ django-jazzmin
 gunicorn
 psycopg2-binary
 openpyxl
+python-docx
