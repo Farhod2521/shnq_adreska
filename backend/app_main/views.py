@@ -520,7 +520,96 @@ class DashboardStatsAPIView(APIView):
 import copy
 import re
 
-BOLD_PLACEHOLDERS = {"shnq_name"}
+BOLD_PLACEHOLDERS = {
+    "shnq_name",
+    "institute_director",
+    "deputy_minister",
+    "economics_head",
+    "total_pages",
+    "final_total_amount",
+    "final_total_amount_words",
+    "executor_organization",
+    "development_deadline",
+    "created_at",
+    "notes",
+    "normative_type",
+}
+
+# ---------------------------------------------------------------------------
+# Raqamni o'zbek tilida so'zga o'girish (lotin)
+# ---------------------------------------------------------------------------
+_ONES = [
+    "", "bir", "ikki", "uch", "to'rt", "besh",
+    "olti", "yetti", "sakkiz", "to'qqiz",
+]
+_TENS = [
+    "", "o'n", "yigirma", "o'ttiz", "qirq", "ellik",
+    "oltmish", "yetmish", "sakson", "to'qson",
+]
+
+
+def _three_digits_to_words(n: int) -> str:
+    """0–999 oralig'idagi sonni so'zga o'giradi."""
+    if n == 0:
+        return ""
+    parts = []
+    if n >= 100:
+        h = n // 100
+        parts.append(("" if h == 1 else _ONES[h] + " ") + "yuz")
+        n %= 100
+    if n >= 10:
+        parts.append(_TENS[n // 10])
+        n %= 10
+    if n:
+        parts.append(_ONES[n])
+    return " ".join(parts)
+
+
+def number_to_uz_words(amount) -> str:
+    """
+    Decimal/float/int sonni o'zbek tilida so'zga o'giradi.
+    Misol: 276578765.50 → "Ikki yuz yetmish olti million besh yuz yetmish sakkiz ming
+                           yetti yuz oltmish besh so'm ellik tiyin"
+    """
+    from decimal import Decimal as D
+    amount = D(str(amount)).quantize(D("0.01"))
+    integer_part = int(amount)
+    tiyin_part = int(round((amount - integer_part) * 100))
+
+    if integer_part == 0 and tiyin_part == 0:
+        return "nol so'm"
+
+    chunks = [
+        (1_000_000_000_000, "trillion"),
+        (1_000_000_000, "milliard"),
+        (1_000_000, "million"),
+        (1_000, "ming"),
+    ]
+
+    parts = []
+    remaining = integer_part
+    for divisor, name in chunks:
+        if remaining >= divisor:
+            q = remaining // divisor
+            remaining %= divisor
+            # "bir ming" emas, faqat "ming"
+            if q == 1 and name == "ming":
+                parts.append("ming")
+            else:
+                parts.append(_three_digits_to_words(q) + " " + name)
+
+    if remaining:
+        parts.append(_three_digits_to_words(remaining))
+
+    result = " ".join(p.strip() for p in parts if p.strip())
+    # Birinchi harfni katta qilamiz
+    result = result[0].upper() + result[1:] if result else "Nol"
+    result += " so'm"
+
+    if tiyin_part:
+        result += " " + _three_digits_to_words(tiyin_part) + " tiyin"
+
+    return result
 
 
 def _make_run(p_elem, text: str, template_rpr, bold: bool):
@@ -661,6 +750,7 @@ class DocumentContractAPIView(APIView):
             "development_deadline": doc.development_deadline or "",
             "notes": doc.notes or "",
             "final_total_amount": str(doc.final_total_amount),
+            "final_total_amount_words": number_to_uz_words(doc.final_total_amount),
             "created_at": doc.created_at.strftime("%d.%m.%Y") if doc.created_at else "",
             # Tashkilot sozlamalari
             "institute_director": org.institute_director,

@@ -246,7 +246,8 @@ export default function SozlamalarPage() {
                 {[
                   { ph: "{{shnq_name}}", desc: "Hujjat nomi (qalin)" },
                   { ph: "{{total_pages}}", desc: "Sahifalar soni" },
-                  { ph: "{{final_total_amount}}", desc: "Yakuniy summa" },
+                  { ph: "{{final_total_amount}}", desc: "Yakuniy summa (raqamda)" },
+                  { ph: "{{final_total_amount_words}}", desc: "Yakuniy summa (so'z bilan, lotin)" },
                   { ph: "{{executor_organization}}", desc: "Bajaruvchi tashkilot" },
                   { ph: "{{development_deadline}}", desc: "Ishlab chiqish muddati" },
                   { ph: "{{created_at}}", desc: "Sana (kk.oo.yyyy)" },
