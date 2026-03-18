@@ -7,6 +7,7 @@ from .views import (
     DocumentCalculationReportTableAPIView,
     DocumentCalculationRetrieveUpdateDestroyAPIView,
     DocumentCalculationXlsxImportAPIView,
+    DocumentContractAPIView,
     HealthCheckAPIView,
     NormativeCoefficientListAPIView,
     StaffCompositionListAPIView,
@@ -40,5 +41,10 @@ urlpatterns = [
         "document-calculations/<int:pk>/",
         DocumentCalculationRetrieveUpdateDestroyAPIView.as_view(),
         name="document-calculation-detail",
+    ),
+    path(
+        "document-calculations/<int:pk>/contract/",
+        DocumentContractAPIView.as_view(),
+        name="document-calculation-contract",
     ),
 ]

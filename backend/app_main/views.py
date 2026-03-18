@@ -1,11 +1,16 @@
+import base64
+import io
 import os
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Count, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from docx import Document as DocxDocument
 from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -508,3 +513,77 @@ class DashboardStatsAPIView(APIView):
             "latest_calculations": latest_rows,
         }
         return Response(payload, status=status.HTTP_200_OK)
+
+
+def _fill_paragraph(para, placeholders: dict):
+    """Paragraph ichidagi placeholder'larni to'ldiradi (split run muammosini hal qiladi)."""
+    full_text = "".join(run.text for run in para.runs)
+    if not any(f"{{{{{k}}}}}" in full_text for k in placeholders):
+        return
+    for key, value in placeholders.items():
+        full_text = full_text.replace(f"{{{{{key}}}}}", str(value))
+    for i, run in enumerate(para.runs):
+        run.text = full_text if i == 0 else ""
+
+
+def _fill_docx(template_path: str, placeholders: dict) -> io.BytesIO:
+    """Shablon Word faylni to'ldiradi va BytesIO qaytaradi."""
+    doc = DocxDocument(template_path)
+    for para in doc.paragraphs:
+        _fill_paragraph(para, placeholders)
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for para in cell.paragraphs:
+                    _fill_paragraph(para, placeholders)
+    buf = io.BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    return buf
+
+
+class DocumentContractAPIView(APIView):
+    """Shartnoma shablonini to'ldirib base64 .docx qaytaradi."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    TEMPLATE_NAME = "shablon_shartnoma.docx"
+
+    def get(self, request, pk):
+        doc = get_object_or_404(DocumentCalculation, pk=pk)
+
+        template_path = os.path.join(
+            settings.BASE_DIR, "contract_templates", self.TEMPLATE_NAME
+        )
+        if not os.path.exists(template_path):
+            return Response(
+                {"error": f"Shablon fayl topilmadi: {self.TEMPLATE_NAME}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        placeholders = {
+            "shnq_name": doc.name,
+            "doc_id": str(doc.id),
+            "normative_type": doc.normative_type,
+            "document_category": doc.document_category,
+            "total_pages": str(doc.total_pages),
+            "complexity_level": str(doc.complexity_level),
+            "executor_organization": doc.executor_organization or "",
+            "development_deadline": doc.development_deadline or "",
+            "notes": doc.notes or "",
+            "final_total_amount": str(doc.final_total_amount),
+            "created_at": doc.created_at.strftime("%d.%m.%Y") if doc.created_at else "",
+        }
+
+        buf = _fill_docx(template_path, placeholders)
+        encoded = base64.b64encode(buf.read()).decode("utf-8")
+
+        return Response(
+            {
+                "filename": f"shartnoma_{doc.id}.docx",
+                "doc_name": doc.name,
+                "data": encoded,
+            },
+            status=status.HTTP_200_OK,
+        )
