@@ -2,7 +2,7 @@
 
 @theme inline {
   --color-primary: #1a227f;
-  --color-background-light: #f6f6f8;
+  --color-background-light: #f0f2f8;
   --font-sans: var(--font-inter);
 }
 
@@ -18,7 +18,7 @@ body {
 body {
   margin: 0;
   color-scheme: light;
-  background: #f6f6f8;
+  background: #f0f2f8;
   color: #0f172a;
   font-family: var(--font-inter), "Inter", sans-serif;
 }
