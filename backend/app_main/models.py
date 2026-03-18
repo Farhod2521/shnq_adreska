@@ -257,3 +257,29 @@ class DocumentCalculation(models.Model):
         self.final_total_amount = result
         return result
 
+
+class OrganizationSettings(models.Model):
+    """Singleton model — tizimda faqat bitta qator bo'ladi (id=1)."""
+
+    institute_director = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="Institut direktori"
+    )
+    deputy_minister = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="Vazir o'rin bosari"
+    )
+    economics_head = models.CharField(
+        max_length=255, blank=True, default="", verbose_name="Iqtisod bo'lim boshlig'i"
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Tashkilot sozlamalari"
+        verbose_name_plural = "Tashkilot sozlamalari"
+
+    def __str__(self) -> str:
+        return "Tashkilot sozlamalari"
+
+    @classmethod
+    def get_instance(cls) -> "OrganizationSettings":
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj

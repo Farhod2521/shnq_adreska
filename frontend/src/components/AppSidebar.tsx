@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-type SidebarSection = "dashboard" | "hujjatlar" | "hisobotlar" | "baza_xlsx";
+type SidebarSection = "dashboard" | "hujjatlar" | "hisobotlar" | "baza_xlsx" | "sozlamalar";
 
 type AppSidebarProps = {
   active: SidebarSection;
@@ -10,7 +10,7 @@ const navItems = [
   { key: "dashboard", href: "/dashboard", icon: "dashboard", label: "Asosiy Panel" },
   { key: "hujjatlar", href: "/hujjatlar", icon: "description", label: "Hujjatlar" },
   { key: "hisobotlar", href: "/hisobotlar", icon: "bar_chart", label: "Hisobotlar" },
-  { key: "sozlamalar", href: "#", icon: "settings", label: "Sozlamalar" },
+  { key: "sozlamalar", href: "/sozlamalar", icon: "settings", label: "Sozlamalar" },
   { key: "yordam", href: "#", icon: "help_center", label: "Yordam" },
 ];
 
