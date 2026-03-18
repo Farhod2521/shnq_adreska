@@ -515,20 +515,98 @@ class DashboardStatsAPIView(APIView):
         return Response(payload, status=status.HTTP_200_OK)
 
 
+import copy
+import re
+
 BOLD_PLACEHOLDERS = {"shnq_name"}
 
+
+def _make_run(p_elem, text: str, template_rpr, bold: bool):
+    """Yangi w:r element yaratadi."""
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    r_elem = OxmlElement("w:r")
+
+    # Run properties nusxasi
+    if template_rpr is not None:
+        new_rpr = copy.deepcopy(template_rpr)
+    else:
+        new_rpr = OxmlElement("w:rPr")
+
+    if bold:
+        b_elem = new_rpr.find(qn("w:b"))
+        if b_elem is None:
+            b_elem = OxmlElement("w:b")
+            new_rpr.insert(0, b_elem)
+        b_elem.attrib.pop(qn("w:val"), None)
+        # bCs ham qo'shish (Kirill/lotin uchun)
+        bcs = new_rpr.find(qn("w:bCs"))
+        if bcs is None:
+            bcs = OxmlElement("w:bCs")
+            new_rpr.insert(1, bcs)
+    else:
+        # bold elementni olib tashlaymiz
+        for tag in ("w:b", "w:bCs"):
+            el = new_rpr.find(qn(tag))
+            if el is not None:
+                new_rpr.remove(el)
+
+    r_elem.append(new_rpr)
+
+    t_elem = OxmlElement("w:t")
+    t_elem.text = text
+    if text != text.strip():
+        t_elem.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+    r_elem.append(t_elem)
+    p_elem.append(r_elem)
+
+
 def _fill_paragraph(para, placeholders: dict):
-    """Paragraph ichidagi placeholder'larni to'ldiradi (split run muammosini hal qiladi)."""
+    """Paragraph ichidagi placeholder'larni to'ldiradi."""
+    from docx.oxml.ns import qn
+
     full_text = "".join(run.text for run in para.runs)
     if not any(f"{{{{{k}}}}}" in full_text for k in placeholders):
         return
-    needs_bold = any(f"{{{{{k}}}}}" in full_text for k in BOLD_PLACEHOLDERS)
+
+    has_bold = any(f"{{{{{k}}}}}" in full_text for k in BOLD_PLACEHOLDERS)
+
+    # Bold kerak bo'lmasa — oddiy almashtirish
+    if not has_bold:
+        for key, value in placeholders.items():
+            full_text = full_text.replace(f"{{{{{key}}}}}", str(value))
+        for i, run in enumerate(para.runs):
+            run.text = full_text if i == 0 else ""
+        return
+
+    # Bold kerak: run'larni bo'lib qayta yaratamiz
+    template_rpr = None
+    if para.runs:
+        template_rpr = para.runs[0]._r.find(qn("w:rPr"))
+
+    # Barcha run'larni o'chirish
+    p_elem = para._p
+    for run in list(para.runs):
+        p_elem.remove(run._r)
+
+    # placeholder'larni non-bold bilan almashtir, bold'larni saqla
     for key, value in placeholders.items():
-        full_text = full_text.replace(f"{{{{{key}}}}}", str(value))
-    for i, run in enumerate(para.runs):
-        run.text = full_text if i == 0 else ""
-        if i == 0 and needs_bold:
-            run.bold = True
+        if key not in BOLD_PLACEHOLDERS:
+            full_text = full_text.replace(f"{{{{{key}}}}}", str(value))
+
+    # Bold placeholder'larni pattern bilan bo'l
+    bold_pattern = "|".join(
+        re.escape(f"{{{{{k}}}}}") for k in BOLD_PLACEHOLDERS if f"{{{{{k}}}}}" in full_text
+    )
+    parts = re.split(f"({bold_pattern})", full_text) if bold_pattern else [full_text]
+
+    for part in parts:
+        if not part:
+            continue
+        is_bold_part = part in {f"{{{{{k}}}}}" for k in BOLD_PLACEHOLDERS}
+        text = placeholders.get(part[2:-2], part) if is_bold_part else part
+        _make_run(p_elem, text, template_rpr, bold=is_bold_part)
 
 
 def _fill_docx(template_path: str, placeholders: dict) -> io.BytesIO:
