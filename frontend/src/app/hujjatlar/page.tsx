@@ -243,9 +243,9 @@ const categoryLabelMap: Record<DocumentCategory, string> = {
 };
 
 const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: string }> = {
-  "1": { label: "Oddiy", className: "bg-emerald-100 text-emerald-800" },
-  "2": { label: "O'rta", className: "bg-amber-100 text-amber-800" },
-  "3": { label: "Yuqori", className: "bg-red-100 text-red-800" },
+  "1": { label: "Oddiy", className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80" },
+  "2": { label: "O'rta", className: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80" },
+  "3": { label: "Yuqori", className: "bg-red-50 text-red-700 ring-1 ring-red-200/80" },
 };
 
 const getInitialFormValues = (): DocumentFormValues => ({
@@ -747,130 +747,126 @@ export default function HujjatlarPage() {
   });
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background-light text-slate-900">
+    <div className="flex h-screen overflow-hidden bg-[#f0f2f8] text-slate-900">
       <AppSidebar active="hujjatlar" />
 
-      <main className="flex flex-1 flex-col overflow-hidden bg-background-light">
-        <header className="z-10 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-8">
+      <main className="flex flex-1 flex-col overflow-hidden">
+        {/* Header */}
+        <header className="z-10 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white px-8 shadow-sm">
           <div className="flex flex-1 items-center gap-4">
-            <div className="group relative w-full max-w-md">
-              <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-slate-400">
+            <div className="relative w-full max-w-sm">
+              <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[18px] text-slate-400">
                 search
               </span>
               <input
-                className="w-full rounded-lg border-none bg-slate-100 py-2 pr-4 pl-10 text-sm transition-all focus:ring-2 focus:ring-primary/20"
+                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 py-2 pr-4 pl-9 text-sm transition-all placeholder:text-slate-400 focus:border-[#1a227f]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a227f]/15"
                 placeholder="Tizim bo'ylab qidirish..."
                 type="text"
               />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-2 right-2 h-2 w-2 rounded-full border-2 border-white bg-red-500" />
+          <div className="flex items-center gap-2">
+            <button className="relative rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100">
+              <span className="material-symbols-outlined text-[22px]">notifications</span>
+              <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full border-2 border-white bg-red-500" />
             </button>
-            <button className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100">
-              <span className="material-symbols-outlined">account_circle</span>
-            </button>
-            <div className="mx-2 h-8 w-px bg-slate-200" />
-            <div className="flex items-center gap-2">
-              <div className="flex size-8 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
+            <div className="mx-1 h-6 w-px bg-slate-200" />
+            <div className="flex items-center gap-2.5 rounded-xl px-3 py-1.5 transition-colors hover:bg-slate-100">
+              <div className="flex size-7 items-center justify-center rounded-full bg-[#1a227f] text-[11px] font-bold text-white">
                 SA
               </div>
-              <span className="text-sm font-medium text-slate-700">Tizim admini</span>
+              <p className="text-sm font-semibold text-slate-800">Tizim admini</p>
+              <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className="mb-8 flex flex-col justify-between gap-6 md:flex-row md:items-end">
+        <div className="flex-1 overflow-y-auto px-8 py-7">
+          {/* Page title + actions */}
+          <div className="mb-6 flex flex-col justify-between gap-4 md:flex-row md:items-center">
             <div>
-              <h1 className="mb-2 text-3xl font-extrabold tracking-tight text-slate-900">
-                Hujjatlar sahifasi
-              </h1>
-              <p className="text-base text-slate-500">
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Hujjatlar sahifasi</h1>
+              <p className="mt-0.5 text-sm text-slate-500">
                 Barcha turdagi me&apos;yoriy va texnik reglament hujjatlari ro&apos;yxati va monitoringi
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <button className="flex items-center gap-2 rounded-lg bg-slate-200 px-5 py-2.5 text-sm font-bold text-slate-700 transition-all hover:bg-slate-300">
-                <span className="material-symbols-outlined text-lg">format_list_bulleted</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow">
+                <span className="material-symbols-outlined text-[18px] text-slate-400">format_list_bulleted</span>
                 Umumiy ro&apos;yxat
               </button>
               <button
-                className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90"
+                className="flex items-center gap-2 rounded-xl bg-[#1a227f] px-4 py-2 text-sm font-semibold text-white shadow-md shadow-[#1a227f]/25 transition-all hover:bg-[#1a227f]/90 hover:-translate-y-0.5 hover:shadow-lg"
                 onClick={openCreateModal}
                 type="button"
               >
-                <span className="material-symbols-outlined text-lg">add_circle</span>
+                <span className="material-symbols-outlined text-[18px]">add</span>
                 Yangi qo&apos;shish
               </button>
             </div>
           </div>
 
-          <div className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-              <div className="relative md:col-span-8">
-                <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-slate-400">
-                  search
-                </span>
-                <input
-                  className="w-full rounded-lg border-slate-200 bg-slate-50 py-2.5 pr-4 pl-10 text-sm focus:border-primary focus:ring-2 focus:ring-primary"
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Umumiy qidiruv: nom, ID, hujjat turi, toifa..."
-                  type="text"
-                  value={searchQuery}
-                />
-              </div>
-              <div className="md:col-span-4">
-                <select
-                  className="w-full rounded-lg border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary"
-                  onChange={(event) => setSelectedNormativeTypeFilter(event.target.value)}
-                  value={selectedNormativeTypeFilter}
-                >
-                  <option value="">Barcha hujjat turlari</option>
-                  {normativeTypeFilterOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+          {/* Search & Filter bar */}
+          <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm md:flex-row md:items-center">
+            <div className="relative flex-1">
+              <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[18px] text-slate-400">
+                search
+              </span>
+              <input
+                className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pr-4 pl-9 text-sm placeholder:text-slate-400 focus:border-[#1a227f]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a227f]/15"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Umumiy qidiruv: nom, ID, hujjat turi, toifa..."
+                type="text"
+                value={searchQuery}
+              />
             </div>
+            <select
+              className="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-700 focus:border-[#1a227f]/40 focus:outline-none focus:ring-2 focus:ring-[#1a227f]/15 md:w-56"
+              onChange={(event) => setSelectedNormativeTypeFilter(event.target.value)}
+              value={selectedNormativeTypeFilter}
+            >
+              <option value="">Barcha hujjat turlari</option>
+              {normativeTypeFilterOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_18px_45px_-28px_rgba(15,23,42,0.45)]">
+          {/* Table card */}
+          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[1160px] border-separate [border-spacing:0_10px] text-left">
+              <table className="w-full min-w-[960px] border-collapse text-left">
                 <thead>
-                  <tr>
-                    <th className="w-12 px-4 py-3 text-center text-xs font-bold tracking-wider text-slate-500 uppercase">
+                  <tr className="border-b border-slate-100 bg-[#f8f9ff]">
+                    <th className="w-12 px-5 py-3.5 text-center text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       №
                     </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
-                      Hujjat turi
+                    <th className="w-28 px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                      Turi
                     </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Hujjat nomi
                     </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="w-28 px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Murakkablik
                     </th>
-                    <th className="px-4 py-3 text-xs font-bold tracking-wider text-slate-500 uppercase">
-                      Hujjat toifasi
+                    <th className="w-48 px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                      Toifasi
                     </th>
-                    <th className="w-[210px] px-4 py-3 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="w-44 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Umumiy narxi
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-bold tracking-wider text-slate-500 uppercase">
+                    <th className="w-36 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Harakatlar
                     </th>
                   </tr>
                 </thead>
-                <tbody className="[&>tr>td:first-child]:rounded-l-xl [&>tr>td:last-child]:rounded-r-xl">
+                <tbody className="divide-y divide-slate-50">
                   {isDocumentsLoading && (
                     <tr>
-                      <td className="rounded-xl bg-slate-50 px-6 py-6 text-sm text-slate-500" colSpan={7}>
+                      <td className="px-6 py-8 text-sm text-slate-400" colSpan={7}>
                         <AppLoadingState
                           compact
                           subtitle="Ro'yxat backenddan olinmoqda."
@@ -881,10 +877,11 @@ export default function HujjatlarPage() {
                   )}
                   {!isDocumentsLoading && filteredDocuments.length === 0 && (
                     <tr>
-                      <td className="rounded-xl bg-slate-50 px-6 py-6 text-sm text-slate-500" colSpan={7}>
-                        {searchQuery.trim() || selectedNormativeTypeFilter
-                          ? "Mos hujjat topilmadi."
-                          : "Hozircha saqlangan hujjatlar yo&apos;q."}
+                      <td className="px-6 py-10 text-center text-sm text-slate-400" colSpan={7}>
+                        <div className="flex flex-col items-center gap-2">
+                          <span className="material-symbols-outlined text-4xl text-slate-200">inbox</span>
+                          <p>{searchQuery.trim() || selectedNormativeTypeFilter ? "Mos hujjat topilmadi." : "Hozircha saqlangan hujjatlar yo'q."}</p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -892,79 +889,87 @@ export default function HujjatlarPage() {
                     filteredDocuments.map((doc, index) => {
                       const complexityInfo = complexityDisplayMap[doc.complexity_level] ?? {
                         label: doc.complexity_level,
-                        className: "bg-slate-100 text-slate-700",
+                        className: "bg-slate-100 text-slate-600",
                       };
                       const isHighAmount = toNumber(doc.final_total_amount) > HIGH_AMOUNT_THRESHOLD;
+                      const isEven = index % 2 === 0;
                       return (
                         <tr
                           key={doc.id}
                           className={`group transition-colors ${
                             isHighAmount
-                              ? "[&>td]:bg-red-50 [&>td]:text-red-950 [&>td]:shadow-[inset_0_0_0_1px_rgba(239,68,68,0.22)] hover:[&>td]:bg-red-100/70"
-                              : "[&>td]:bg-slate-100/70 hover:[&>td]:bg-slate-200/80"
+                              ? "bg-red-50/60 hover:bg-red-50"
+                              : isEven
+                              ? "bg-white hover:bg-blue-50/40"
+                              : "bg-[#f8f9ff]/60 hover:bg-blue-50/40"
                           }`}
                         >
-                          <td className="px-4 py-4 text-center text-sm font-medium text-slate-500">{index + 1}</td>
-                          <td className="px-4 py-4">
-                            <span className="inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-primary shadow-[inset_0_0_0_1px_rgba(26,34,127,0.16)]">
+                          <td className="px-5 py-3.5 text-center text-sm font-medium text-slate-400">{index + 1}</td>
+                          <td className="px-5 py-3.5">
+                            <span className="inline-flex items-center rounded-lg bg-[#1a227f]/8 px-2.5 py-1 text-xs font-bold text-[#1a227f]">
                               {getNormativeTypeLabel(doc.normative_type)}
                             </span>
                           </td>
-                          <td className="px-4 py-4">
-                            <div className="flex flex-col">
-                              <span className="mb-1 max-w-[44ch] truncate text-sm leading-tight font-semibold text-slate-900">
-                                {doc.name}
-                              </span>
-                              <span className="font-mono text-[11px] text-slate-500">ID: #{doc.id}</span>
-                            </div>
+                          <td className="px-5 py-3.5">
+                            <p className="max-w-[42ch] truncate text-sm font-semibold leading-tight text-slate-900">
+                              {doc.name}
+                            </p>
+                            <p className="mt-0.5 font-mono text-[11px] text-slate-400">ID: #{doc.id}</p>
                           </td>
-                          <td className="px-4 py-4">
+                          <td className="px-5 py-3.5">
                             <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold shadow-[inset_0_0_0_1px_rgba(148,163,184,0.22)] ${complexityInfo.className}`}
+                              className={`inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold ${complexityInfo.className}`}
                             >
                               {complexityInfo.label}
                             </span>
                           </td>
-                          <td className="px-4 py-4">
-                            <span className="inline-block max-w-[24ch] truncate text-sm leading-snug text-slate-700">
+                          <td className="px-5 py-3.5">
+                            <span className="text-sm text-slate-600">
                               {categoryLabelMap[doc.document_category]}
                             </span>
                           </td>
-                          <td className="px-4 py-4 text-right text-sm font-bold whitespace-nowrap tabular-nums text-slate-900">
-                            <span>{formatMoney(toNumber(doc.final_total_amount))}</span>
-                            <span className="ml-1">UZS</span>
+                          <td className="px-5 py-3.5 text-right">
+                            <p className="text-sm font-semibold tabular-nums text-slate-900 whitespace-nowrap">
+                              {formatMoney(toNumber(doc.final_total_amount))}
+                            </p>
+                            <p className="text-[11px] text-slate-400">UZS</p>
                           </td>
-                          <td className="px-4 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {/* View - primary */}
                               <button
-                                className="rounded-lg bg-white p-2 text-primary shadow-[inset_0_0_0_1px_rgba(26,34,127,0.16)] transition-all hover:-translate-y-0.5 hover:bg-primary/5"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1a227f] text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-[#1a227f]/90 hover:shadow"
                                 onClick={() => openModal(doc)}
                                 title="Hujjatni ko'rish"
                                 type="button"
                               >
-                                <span className="material-symbols-outlined text-[20px]">visibility</span>
+                                <span className="material-symbols-outlined text-[17px]">visibility</span>
                               </button>
+                              {/* Edit - outline */}
                               <button
-                                className="rounded-lg bg-white p-2 text-indigo-600 shadow-[inset_0_0_0_1px_rgba(79,70,229,0.16)] transition-all hover:-translate-y-0.5 hover:bg-indigo-50"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-all hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
                                 onClick={() => openEditModal(doc)}
                                 title="Hujjatni tahrirlash"
                                 type="button"
                               >
-                                <span className="material-symbols-outlined text-[20px]">edit</span>
+                                <span className="material-symbols-outlined text-[17px]">edit</span>
                               </button>
+                              {/* Delete - ghost danger */}
                               <button
-                                className="rounded-lg bg-white p-2 text-red-600 shadow-[inset_0_0_0_1px_rgba(220,38,38,0.16)] transition-all hover:-translate-y-0.5 hover:bg-red-50"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:-translate-y-0.5 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                                 onClick={() => openDeleteConfirm(doc)}
                                 title="Hujjatni o'chirish"
                                 type="button"
                               >
-                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                                <span className="material-symbols-outlined text-[17px]">delete</span>
                               </button>
+                              {/* Download - ghost */}
                               <button
-                                className="rounded-lg bg-white p-2 text-slate-500 shadow-[inset_0_0_0_1px_rgba(100,116,139,0.18)] transition-all hover:-translate-y-0.5 hover:bg-slate-100"
+                                className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-600"
                                 type="button"
+                                title="Yuklab olish"
                               >
-                                <span className="material-symbols-outlined text-[20px]">download</span>
+                                <span className="material-symbols-outlined text-[17px]">download</span>
                               </button>
                             </div>
                           </td>
@@ -975,28 +980,32 @@ export default function HujjatlarPage() {
               </table>
             </div>
 
-            <div className="flex items-center justify-between border-t border-slate-200 bg-slate-50/80 px-6 py-4">
-              <p className="text-sm text-slate-500">
-                {filteredDocuments.length} ta ko&apos;rsatilmoqda (Jami {documents.length} ta)
+            {/* Table footer */}
+            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">
+              <p className="text-xs font-medium text-slate-500">
+                <span className="font-bold text-slate-700">{filteredDocuments.length}</span> ta ko&apos;rsatilmoqda &nbsp;&middot;&nbsp; Jami{" "}
+                <span className="font-bold text-slate-700">{documents.length}</span> ta
               </p>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-1.5">
                 <button
-                  className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-600 opacity-50"
+                  className="flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-400 opacity-50"
                   disabled
                 >
+                  <span className="material-symbols-outlined text-[14px]">chevron_left</span>
                   Oldingi
                 </button>
-                <button className="rounded border border-primary bg-primary px-3 py-1 text-sm font-bold text-white">
+                <button className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1a227f] text-xs font-bold text-white shadow-sm">
                   1
                 </button>
-                <button className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-600">
+                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50">
                   2
                 </button>
-                <button className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-600">
+                <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-xs font-medium text-slate-600 hover:bg-slate-50">
                   3
                 </button>
-                <button className="rounded border border-slate-300 bg-white px-3 py-1 text-sm text-slate-600">
+                <button className="flex h-8 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-600 hover:bg-slate-50">
                   Keyingi
+                  <span className="material-symbols-outlined text-[14px]">chevron_right</span>
                 </button>
               </div>
             </div>
