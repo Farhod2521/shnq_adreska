@@ -3,7 +3,6 @@
 import AppSidebar from "@/components/AppSidebar";
 import AppLoadingState from "@/components/AppLoadingState";
 import { useEffect, useRef, useState } from "react";
-import mammoth from "mammoth";
 
 type StaffSnapshotItem = {
   staff_id: number;
@@ -289,13 +288,8 @@ export default function HujjatlarPage() {
   const [planned2026Percent, setPlanned2026Percent] = useState(100);
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Shartnoma modal
-  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
-  const [contractHtml, setContractHtml] = useState("");
-  const [contractDocx, setContractDocx] = useState<string>("");
-  const [contractFilename, setContractFilename] = useState("");
+  // Shartnoma
   const [isContractLoading, setIsContractLoading] = useState(false);
-  const [contractDocName, setContractDocName] = useState("");
 
   useEffect(() => {
     const previous = document.body.style.overflow;
@@ -406,44 +400,30 @@ export default function HujjatlarPage() {
   };
 
   const openContractModal = async (doc: DocumentCalculationItem) => {
-    setIsContractModalOpen(true);
     setIsContractLoading(true);
-    setContractHtml("");
-    setContractDocx("");
-    setContractDocName(doc.name);
-    setContractFilename(`shartnoma_${doc.id}.docx`);
     try {
       const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/contract/`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        setContractHtml(`<p style="color:red">${(err as { error?: string }).error ?? "Xatolik yuz berdi"}</p>`);
+        alert((err as { error?: string }).error ?? "Shartnomani yuklashda xatolik yuz berdi.");
         return;
       }
       const payload = (await res.json()) as { data: string; filename: string; doc_name: string };
-      setContractDocx(payload.data);
-      setContractFilename(payload.filename);
       const binary = Uint8Array.from(atob(payload.data), (c) => c.charCodeAt(0));
-      const result = await mammoth.convertToHtml({ arrayBuffer: binary.buffer as ArrayBuffer });
-      setContractHtml(result.value || "<p>Bo'sh hujjat</p>");
+      const blob = new Blob([binary], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = payload.filename;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch {
-      setContractHtml("<p style='color:red'>Shartnomani yuklashda xatolik yuz berdi.</p>");
+      alert("Shartnomani yuklashda xatolik yuz berdi.");
     } finally {
       setIsContractLoading(false);
     }
-  };
-
-  const downloadContract = () => {
-    if (!contractDocx) return;
-    const binary = Uint8Array.from(atob(contractDocx), (c) => c.charCodeAt(0));
-    const blob = new Blob([binary], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = contractFilename;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const loadDocuments = async () => {
@@ -1083,60 +1063,6 @@ export default function HujjatlarPage() {
         </div>
       </div>
 
-      {/* Shartnoma modal */}
-      {isContractModalOpen && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-          onClick={() => setIsContractModalOpen(false)}
-        >
-          <div
-            className="flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-            style={{ maxHeight: "90vh" }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal header */}
-            <div className="flex items-center justify-between border-b border-slate-100 bg-[#f8f9ff] px-6 py-4">
-              <div>
-                <p className="text-xs font-bold tracking-wider text-[#1a227f] uppercase">Shartnoma ko&apos;rinishi</p>
-                <h2 className="mt-0.5 text-base font-bold text-slate-900 max-w-[50ch] truncate">{contractDocName}</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  className="flex items-center gap-1.5 rounded-xl bg-[#1a227f] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1a227f]/90 disabled:opacity-40"
-                  disabled={!contractDocx}
-                  onClick={downloadContract}
-                  type="button"
-                >
-                  <span className="material-symbols-outlined text-[18px]">download</span>
-                  Word yuklab olish
-                </button>
-                <button
-                  className="flex size-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100"
-                  onClick={() => setIsContractModalOpen(false)}
-                  type="button"
-                >
-                  <span className="material-symbols-outlined text-[20px]">close</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Modal body */}
-            <div className="flex-1 overflow-y-auto bg-slate-50 p-6">
-              {isContractLoading ? (
-                <div className="flex h-64 items-center justify-center gap-3 text-slate-400">
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-[#1a227f] border-t-transparent" />
-                  <span className="text-sm">Shartnoma yuklanmoqda...</span>
-                </div>
-              ) : (
-                <div
-                  className="contract-preview mx-auto max-w-3xl rounded-xl border border-slate-200 bg-white px-10 py-10 shadow-sm"
-                  dangerouslySetInnerHTML={{ __html: contractHtml }}
-                />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm">
