@@ -34,6 +34,7 @@ services:
     volumes:
       - ./backend/staticfiles:/app/staticfiles
       - ./backend/media:/app/media
+      - ./backend/contract_templates:/app/contract_templates
     networks:
       - shnq_net
 
