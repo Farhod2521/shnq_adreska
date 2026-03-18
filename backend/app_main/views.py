@@ -631,7 +631,7 @@ class DocumentContractAPIView(APIView):
     authentication_classes = []
     permission_classes = []
 
-    TEMPLATE_NAME = "shablon_shartnoma.docx"
+    TEMPLATE_NAME = "shartnoma.docx"
 
     def get(self, request, pk):
         doc = get_object_or_404(DocumentCalculation, pk=pk)
