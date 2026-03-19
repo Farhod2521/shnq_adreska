@@ -318,6 +318,8 @@ export default function HujjatlarPage() {
   const [showToast, setShowToast] = useState(false);
   const [formValues, setFormValues] = useState<DocumentFormValues>(getInitialFormValues());
   const [staffCounts, setStaffCounts] = useState<Record<number, number>>({});
+  const [sortKey, setSortKey] = useState<"name" | "total_pages" | "final_total_amount" | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const printRef = useRef<HTMLDivElement>(null);
 
   // Shartnoma
@@ -970,29 +972,63 @@ export default function HujjatlarPage() {
   }));
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-  const filteredDocuments = documents.filter((doc) => {
-    if (selectedNormativeTypeFilter && doc.normative_type !== selectedNormativeTypeFilter) {
-      return false;
+  const filteredDocuments = documents
+    .filter((doc) => {
+      if (selectedNormativeTypeFilter && doc.normative_type !== selectedNormativeTypeFilter) {
+        return false;
+      }
+      if (!normalizedSearchQuery) return true;
+      const searchableText = [
+        doc.name,
+        String(doc.id),
+        doc.normative_type,
+        getNormativeTypeLabel(doc.normative_type),
+        categoryLabelMap[doc.document_category],
+        complexityDisplayMap[doc.complexity_level]?.label ?? doc.complexity_level,
+        formatMoney(toNumber(doc.final_total_amount)),
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchableText.includes(normalizedSearchQuery);
+    })
+    .sort((a, b) => {
+      if (!sortKey) return 0;
+      let aVal: string | number;
+      let bVal: string | number;
+      if (sortKey === "name") {
+        aVal = a.name.toLowerCase();
+        bVal = b.name.toLowerCase();
+      } else if (sortKey === "total_pages") {
+        aVal = Number(a.total_pages);
+        bVal = Number(b.total_pages);
+      } else {
+        aVal = toNumber(a.final_total_amount);
+        bVal = toNumber(b.final_total_amount);
+      }
+      if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  const toggleSort = (key: typeof sortKey) => {
+    if (sortKey === key) {
+      setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
     }
+  };
 
-    if (!normalizedSearchQuery) {
-      return true;
+  const SortIcon = ({ col }: { col: typeof sortKey }) => {
+    if (sortKey !== col) {
+      return <span className="material-symbols-outlined text-[14px] opacity-30">unfold_more</span>;
     }
-
-    const searchableText = [
-      doc.name,
-      String(doc.id),
-      doc.normative_type,
-      getNormativeTypeLabel(doc.normative_type),
-      categoryLabelMap[doc.document_category],
-      complexityDisplayMap[doc.complexity_level]?.label ?? doc.complexity_level,
-      formatMoney(toNumber(doc.final_total_amount)),
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return searchableText.includes(normalizedSearchQuery);
-  });
+    return (
+      <span className="material-symbols-outlined text-[14px] text-primary">
+        {sortDir === "asc" ? "keyboard_arrow_up" : "keyboard_arrow_down"}
+      </span>
+    );
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f0f2f8] text-slate-900">
@@ -1095,10 +1131,24 @@ export default function HujjatlarPage() {
                       Turi
                     </th>
                     <th className="px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
-                      Hujjat nomi
+                      <button
+                        className="flex items-center gap-1 transition-colors hover:text-primary"
+                        onClick={() => toggleSort("name")}
+                        type="button"
+                      >
+                        Hujjat nomi
+                        <SortIcon col="name" />
+                      </button>
                     </th>
                     <th className="w-24 px-5 py-3.5 text-center text-[11px] font-bold tracking-wider text-slate-400 uppercase">
-                      Sahifa
+                      <button
+                        className="flex w-full items-center justify-center gap-1 transition-colors hover:text-primary"
+                        onClick={() => toggleSort("total_pages")}
+                        type="button"
+                      >
+                        Sahifa
+                        <SortIcon col="total_pages" />
+                      </button>
                     </th>
                     <th className="w-28 px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Murakkablik
@@ -1107,7 +1157,14 @@ export default function HujjatlarPage() {
                       Toifasi
                     </th>
                     <th className="w-44 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
-                      Umumiy narxi
+                      <button
+                        className="flex w-full items-center justify-end gap-1 transition-colors hover:text-primary"
+                        onClick={() => toggleSort("final_total_amount")}
+                        type="button"
+                      >
+                        Umumiy narxi
+                        <SortIcon col="final_total_amount" />
+                      </button>
                     </th>
                     <th className="w-36 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Harakatlar
