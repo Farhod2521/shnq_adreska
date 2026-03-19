@@ -296,6 +296,14 @@ export default function HujjatlarPage() {
   const [contractDocName, setContractDocName] = useState("");
   const contractPreviewRef = useRef<HTMLDivElement>(null);
 
+  // Texnik topshiriq
+  const [isTexnikModalOpen, setIsTexnikModalOpen] = useState(false);
+  const [isTexnikLoading, setIsTexnikLoading] = useState(false);
+  const [texnikDocx64, setTexnikDocx64] = useState("");
+  const [texnikFilename, setTexnikFilename] = useState("");
+  const [texnikDocName, setTexnikDocName] = useState("");
+  const texnikPreviewRef = useRef<HTMLDivElement>(null);
+
   // Kalendar reja
   const [isKalendarModalOpen, setIsKalendarModalOpen] = useState(false);
   const [isKalendarLoading, setIsKalendarLoading] = useState(false);
@@ -462,6 +470,60 @@ export default function HujjatlarPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = contractFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openTexnikModal = async (doc: DocumentCalculationItem) => {
+    setIsTexnikModalOpen(true);
+    setIsTexnikLoading(true);
+    setTexnikDocx64("");
+    setTexnikDocName(doc.name);
+    setTexnikFilename(`texnik_topshiriq_${doc.id}.docx`);
+    try {
+      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/texnik-topshiriq/`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error ?? "Texnik topshiriqni yuklashda xatolik yuz berdi.");
+        setIsTexnikModalOpen(false);
+        return;
+      }
+      const payload = (await res.json()) as { data: string; filename: string; doc_name: string };
+      setTexnikFilename(payload.filename);
+      setTexnikDocx64(payload.data);
+    } catch {
+      alert("Texnik topshiriqni yuklashda xatolik yuz berdi.");
+      setIsTexnikModalOpen(false);
+    } finally {
+      setIsTexnikLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!texnikDocx64 || !texnikPreviewRef.current) return;
+    const render = async () => {
+      const { renderAsync } = await import("docx-preview");
+      const binary = Uint8Array.from(atob(texnikDocx64), (c) => c.charCodeAt(0));
+      if (texnikPreviewRef.current) {
+        texnikPreviewRef.current.innerHTML = "";
+        await renderAsync(binary.buffer as ArrayBuffer, texnikPreviewRef.current, undefined, {
+          className: "docx-preview-wrapper",
+        });
+      }
+    };
+    void render();
+  }, [texnikDocx64]);
+
+  const downloadTexnik = () => {
+    if (!texnikDocx64) return;
+    const binary = Uint8Array.from(atob(texnikDocx64), (c) => c.charCodeAt(0));
+    const blob = new Blob([binary], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = texnikFilename;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1058,6 +1120,14 @@ export default function HujjatlarPage() {
                                 <span className="material-symbols-outlined text-[13px]">visibility</span>
                                 Kalendar reja
                               </button>
+                              <button
+                                className="flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-600 transition-colors hover:bg-amber-100"
+                                onClick={() => openTexnikModal(doc)}
+                                type="button"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">visibility</span>
+                                Texnik topshiriq
+                              </button>
                             </div>
                           </td>
                           <td className="px-5 py-3.5 text-center">
@@ -1221,6 +1291,61 @@ export default function HujjatlarPage() {
               ) : (
                 <div
                   ref={contractPreviewRef}
+                  className="mx-auto max-w-4xl rounded-xl bg-white shadow"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Texnik topshiriq modal */}
+      {isTexnikModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          onClick={() => setIsTexnikModalOpen(false)}
+        >
+          <div
+            className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ maxHeight: "92vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 bg-amber-50 px-6 py-4">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider text-amber-700 uppercase">Texnik topshiriq</p>
+                <h2 className="mt-0.5 max-w-[52ch] truncate text-sm font-bold text-slate-900">{texnikDocName}</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-amber-600 disabled:opacity-40"
+                  disabled={!texnikDocx64}
+                  onClick={downloadTexnik}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Word yuklab olish
+                </button>
+                <button
+                  className="flex size-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100"
+                  onClick={() => setIsTexnikModalOpen(false)}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-6">
+              {isTexnikLoading ? (
+                <div className="flex h-64 items-center justify-center gap-3 text-slate-400">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
+                  <span className="text-sm">Yuklanmoqda...</span>
+                </div>
+              ) : (
+                <div
+                  ref={texnikPreviewRef}
                   className="mx-auto max-w-4xl rounded-xl bg-white shadow"
                 />
               )}

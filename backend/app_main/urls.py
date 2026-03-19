@@ -9,6 +9,7 @@ from .views import (
     DocumentCalculationXlsxImportAPIView,
     DocumentContractAPIView,
     DocumentKalendarRejaAPIView,
+    DocumentTexnikTopshiriqAPIView,
     HealthCheckAPIView,
     NormativeCoefficientListAPIView,
     OrganizationSettingsAPIView,
@@ -53,6 +54,11 @@ urlpatterns = [
         "document-calculations/<int:pk>/kalendar-reja/",
         DocumentKalendarRejaAPIView.as_view(),
         name="document-calculation-kalendar-reja",
+    ),
+    path(
+        "document-calculations/<int:pk>/texnik-topshiriq/",
+        DocumentTexnikTopshiriqAPIView.as_view(),
+        name="document-calculation-texnik-topshiriq",
     ),
     path(
         "organization-settings/",
