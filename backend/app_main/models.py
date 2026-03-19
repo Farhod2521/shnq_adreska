@@ -162,6 +162,20 @@ class DocumentCalculation(models.Model):
         default=0,
         verbose_name="2026-yilga rejalashtirilgan",
     )
+    # Kalendar reja — 4 bosqich
+    stage1_start = models.CharField(max_length=100, blank=True, default="", verbose_name="I bosqich boshlanishi")
+    stage1_end = models.CharField(max_length=100, blank=True, default="", verbose_name="I bosqich tugashi")
+    stage1_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="I bosqich summasi")
+    stage2_start = models.CharField(max_length=100, blank=True, default="", verbose_name="II bosqich boshlanishi")
+    stage2_end = models.CharField(max_length=100, blank=True, default="", verbose_name="II bosqich tugashi")
+    stage2_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="II bosqich summasi")
+    stage3_start = models.CharField(max_length=100, blank=True, default="", verbose_name="III bosqich boshlanishi")
+    stage3_end = models.CharField(max_length=100, blank=True, default="", verbose_name="III bosqich tugashi")
+    stage3_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="III bosqich summasi")
+    stage4_start = models.CharField(max_length=100, blank=True, default="", verbose_name="IV bosqich boshlanishi")
+    stage4_end = models.CharField(max_length=100, blank=True, default="", verbose_name="IV bosqich tugashi")
+    stage4_amount = models.DecimalField(max_digits=18, decimal_places=2, default=0, verbose_name="IV bosqich summasi")
+
     development_deadline = models.CharField(
         max_length=255,
         blank=True,

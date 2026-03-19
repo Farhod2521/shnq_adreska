@@ -68,6 +68,18 @@ class DocumentCalculationSerializer(serializers.ModelSerializer):
             "final_total_amount",
             "completed_amount",
             "planned_amount",
+            "stage1_start",
+            "stage1_end",
+            "stage1_amount",
+            "stage2_start",
+            "stage2_end",
+            "stage2_amount",
+            "stage3_start",
+            "stage3_end",
+            "stage3_amount",
+            "stage4_start",
+            "stage4_end",
+            "stage4_amount",
             "development_deadline",
             "executor_organization",
             "notes",
@@ -92,6 +104,18 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
     planned_amount = serializers.DecimalField(
         max_digits=18, decimal_places=2, required=False, default="0.00"
     )
+    stage1_start = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage1_end = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage1_amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False, default="0.00")
+    stage2_start = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage2_end = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage2_amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False, default="0.00")
+    stage3_start = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage3_end = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage3_amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False, default="0.00")
+    stage4_start = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage4_end = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
+    stage4_amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False, default="0.00")
     development_deadline = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     executor_organization = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     notes = serializers.CharField(required=False, allow_blank=True, default="")

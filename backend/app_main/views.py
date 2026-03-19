@@ -756,6 +756,19 @@ class DocumentContractAPIView(APIView):
             "institute_director": org.institute_director,
             "deputy_minister": org.deputy_minister,
             "economics_head": org.economics_head,
+            # Kalendar reja bosqichlari
+            "I_start": doc.stage1_start,
+            "I_end": doc.stage1_end,
+            "I_summa": str(doc.stage1_amount),
+            "II_start": doc.stage2_start,
+            "II_end": doc.stage2_end,
+            "II_summa": str(doc.stage2_amount),
+            "III_start": doc.stage3_start,
+            "III_end": doc.stage3_end,
+            "III_summa": str(doc.stage3_amount),
+            "IV_start": doc.stage4_start,
+            "IV_end": doc.stage4_end,
+            "IV_summa": str(doc.stage4_amount),
         }
 
         buf = _fill_docx(template_path, placeholders)

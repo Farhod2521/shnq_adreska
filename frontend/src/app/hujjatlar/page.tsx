@@ -51,13 +51,24 @@ type DocumentFormValues = {
   name: string;
   normative_type: string;
   total_pages: number;
-  completed_amount: number;
   complexity_level: ComplexityLevel;
   document_category: DocumentCategory;
   is_research_required: boolean;
   development_deadline: string;
   executor_organization: string;
   notes: string;
+  stage1_start: string;
+  stage1_end: string;
+  stage1_amount: number;
+  stage2_start: string;
+  stage2_end: string;
+  stage2_amount: number;
+  stage3_start: string;
+  stage3_end: string;
+  stage3_amount: number;
+  stage4_start: string;
+  stage4_end: string;
+  stage4_amount: number;
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
@@ -84,6 +95,18 @@ type DocumentCalculationItem = {
   final_total_amount: string;
   completed_amount: string;
   planned_amount: string;
+  stage1_start: string;
+  stage1_end: string;
+  stage1_amount: string;
+  stage2_start: string;
+  stage2_end: string;
+  stage2_amount: string;
+  stage3_start: string;
+  stage3_end: string;
+  stage3_amount: string;
+  stage4_start: string;
+  stage4_end: string;
+  stage4_amount: string;
   created_at: string;
   updated_at: string;
 };
@@ -253,13 +276,24 @@ const getInitialFormValues = (): DocumentFormValues => ({
   name: "",
   normative_type: "",
   total_pages: 1,
-  completed_amount: 0,
   complexity_level: "1",
   document_category: "new",
   is_research_required: false,
   development_deadline: "",
   executor_organization: "",
   notes: "",
+  stage1_start: "",
+  stage1_end: "",
+  stage1_amount: 0,
+  stage2_start: "",
+  stage2_end: "",
+  stage2_amount: 0,
+  stage3_start: "",
+  stage3_end: "",
+  stage3_amount: 0,
+  stage4_start: "",
+  stage4_end: "",
+  stage4_amount: 0,
 });
 
 export default function HujjatlarPage() {
@@ -284,8 +318,6 @@ export default function HujjatlarPage() {
   const [showToast, setShowToast] = useState(false);
   const [formValues, setFormValues] = useState<DocumentFormValues>(getInitialFormValues());
   const [staffCounts, setStaffCounts] = useState<Record<number, number>>({});
-  const [isPlanSplitOpen, setIsPlanSplitOpen] = useState(false);
-  const [planned2026Percent, setPlanned2026Percent] = useState(100);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Shartnoma
@@ -376,26 +408,30 @@ export default function HujjatlarPage() {
       name: document.name ?? "",
       normative_type: document.normative_type ?? "",
       total_pages: Number(document.total_pages) || 1,
-      completed_amount: toNumber(document.completed_amount),
       complexity_level: document.complexity_level ?? "1",
       document_category: document.document_category ?? "new",
       is_research_required: Boolean(document.is_research_required),
       development_deadline: document.development_deadline ?? "",
       executor_organization: document.executor_organization ?? "",
       notes: document.notes ?? "",
+      stage1_start: document.stage1_start ?? "",
+      stage1_end: document.stage1_end ?? "",
+      stage1_amount: toNumber(document.stage1_amount),
+      stage2_start: document.stage2_start ?? "",
+      stage2_end: document.stage2_end ?? "",
+      stage2_amount: toNumber(document.stage2_amount),
+      stage3_start: document.stage3_start ?? "",
+      stage3_end: document.stage3_end ?? "",
+      stage3_amount: toNumber(document.stage3_amount),
+      stage4_start: document.stage4_start ?? "",
+      stage4_end: document.stage4_end ?? "",
+      stage4_amount: toNumber(document.stage4_amount),
     });
     const snapshotCounts = (document.staff_snapshot ?? []).reduce<Record<number, number>>((acc, item) => {
       acc[item.staff_id] = Number(item.employee_count) || 0;
       return acc;
     }, {});
     setStaffCounts(snapshotCounts);
-    const finalAmount = toNumber(document.final_total_amount);
-    const completedAmount = toNumber(document.completed_amount);
-    const remaining = Math.max(finalAmount - completedAmount, 0);
-    const planned2026Amount = toNumber(document.planned_amount);
-    const percent = remaining > 0 ? (planned2026Amount / remaining) * 100 : 100;
-    setPlanned2026Percent(Math.max(0, Math.min(100, Number(percent.toFixed(2)))));
-    setIsPlanSplitOpen(true);
     setIsCreateModalOpen(true);
   };
 
@@ -403,8 +439,6 @@ export default function HujjatlarPage() {
     setIsCreateModalOpen(false);
     setEditingDocumentId(null);
     setFormError("");
-    setIsPlanSplitOpen(false);
-    setPlanned2026Percent(100);
   };
 
   const openDeleteConfirm = (document: DocumentCalculationItem) => {
@@ -658,12 +692,32 @@ export default function HujjatlarPage() {
   const pageRatio =
     selectedBaseCoefficient > 0 ? toNumber(formValues.total_pages) / selectedBaseCoefficient : 0;
   const finalTotalAmount = staffTotalAmount * pageRatio * selectedComplexityCoefficient * FORMULA_MULTIPLIER;
-  const normalizedCompletedAmount = Math.min(Math.max(toNumber(formValues.completed_amount), 0), finalTotalAmount);
-  const plannedTotalAmount = Math.max(finalTotalAmount - normalizedCompletedAmount, 0);
-  const planned2026Amount = (plannedTotalAmount * planned2026Percent) / 100;
-  const planned2027Percent = Math.max(0, 100 - planned2026Percent);
-  const planned2027Amount = Math.max(plannedTotalAmount - planned2026Amount, 0);
   const researchCoefficient = formValues.is_research_required ? 1.4 : 1.0;
+
+  // Kalendar reja — avtomatik hisoblangan bosqich summalar
+  const BILLION = 1_000_000_000;
+  const autoStage1Amount = finalTotalAmount > BILLION
+    ? Math.round(finalTotalAmount * 0.15 * 100) / 100
+    : Math.round(finalTotalAmount * 0.30 * 100) / 100;
+  const autoStage3Amount = Math.round(finalTotalAmount * 0.05 * 100) / 100;
+  const autoStage4Amount = Math.round(finalTotalAmount * 0.10 * 100) / 100;
+  const autoStage2Amount = Math.max(
+    Math.round((finalTotalAmount - autoStage1Amount - autoStage3Amount - autoStage4Amount) * 100) / 100,
+    0
+  );
+
+  // finalTotalAmount o'zgarganda bosqich summalarini avtomatik yangilash
+  useEffect(() => {
+    if (!isCreateModalOpen || finalTotalAmount <= 0) return;
+    setFormValues((prev) => ({
+      ...prev,
+      stage1_amount: autoStage1Amount,
+      stage2_amount: autoStage2Amount,
+      stage3_amount: autoStage3Amount,
+      stage4_amount: autoStage4Amount,
+    }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finalTotalAmount, isCreateModalOpen]);
 
   useEffect(() => {
     if (!isCreateModalOpen) {
@@ -756,8 +810,18 @@ export default function HujjatlarPage() {
           staff_counts: Object.fromEntries(
             Object.entries(staffCounts).map(([key, value]) => [key, Number(value) || 0])
           ),
-          completed_amount: Number(normalizedCompletedAmount.toFixed(2)),
-          planned_amount: Number(planned2026Amount.toFixed(2)),
+          stage1_start: formValues.stage1_start.trim(),
+          stage1_end: formValues.stage1_end.trim(),
+          stage1_amount: Number(formValues.stage1_amount.toFixed(2)),
+          stage2_start: formValues.stage2_start.trim(),
+          stage2_end: formValues.stage2_end.trim(),
+          stage2_amount: Number(formValues.stage2_amount.toFixed(2)),
+          stage3_start: formValues.stage3_start.trim(),
+          stage3_end: formValues.stage3_end.trim(),
+          stage3_amount: Number(formValues.stage3_amount.toFixed(2)),
+          stage4_start: formValues.stage4_start.trim(),
+          stage4_end: formValues.stage4_end.trim(),
+          stage4_amount: Number(formValues.stage4_amount.toFixed(2)),
         }),
       });
 
@@ -1810,109 +1874,64 @@ export default function HujjatlarPage() {
                     Formula: ish_haqi_jami * (sahifa_soni / bet_soni) * murakkablik_darajasi * 2.3
                   </p>
 
+                  {/* Kalendar reja */}
                   <div className="mt-5 rounded-xl border border-primary/20 bg-white">
-                    <button
-                      className="flex w-full items-center justify-between px-4 py-3 text-left"
-                      onClick={() => setIsPlanSplitOpen((prev) => !prev)}
-                      type="button"
-                    >
-                      <span className="text-sm font-bold text-primary">Rejalashtirilgan summalar taqsimoti</span>
-                      <span className="material-symbols-outlined text-primary">
-                        {isPlanSplitOpen ? "remove" : "add"}
+                    <div className="flex items-center justify-between border-b border-primary/15 px-4 py-3">
+                      <span className="text-sm font-bold text-primary">Kalendar reja</span>
+                      <span className="text-xs text-slate-500">
+                        Jami: <span className="font-semibold text-slate-700">{formatMoney(finalTotalAmount)} so&apos;m</span>
+                        {finalTotalAmount > 0 && (
+                          <span className="ml-2 text-slate-400">
+                            ({finalTotalAmount > BILLION ? "1 mlrd dan yuqori → I bosqich 15%" : "1 mlrd dan past → I bosqich 30%"})
+                          </span>
+                        )}
                       </span>
-                    </button>
-
-                    {isPlanSplitOpen && (
-                      <div className="grid grid-cols-1 gap-4 border-t border-primary/15 p-4 md:grid-cols-2">
-                        <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                          <label className="block text-xs font-bold tracking-wide text-slate-600 uppercase">
-                            01.01.2026 holatiga bajarilgan summa
-                          </label>
-                          <div className="relative">
+                    </div>
+                    <div className="space-y-3 p-4">
+                      {([
+                        { num: 1, label: "I bosqich", startKey: "stage1_start", endKey: "stage1_end", amountKey: "stage1_amount" },
+                        { num: 2, label: "II bosqich", startKey: "stage2_start", endKey: "stage2_end", amountKey: "stage2_amount" },
+                        { num: 3, label: "III bosqich", startKey: "stage3_start", endKey: "stage3_end", amountKey: "stage3_amount" },
+                        { num: 4, label: "IV bosqich", startKey: "stage4_start", endKey: "stage4_end", amountKey: "stage4_amount" },
+                      ] as const).map(({ label, startKey, endKey, amountKey }) => (
+                        <div key={label} className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-3">
+                          <div>
+                            <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — boshlanishi</p>
                             <input
-                              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 pr-12 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                              min={0}
-                              onChange={(event) =>
-                                setFormValues((prev) => ({
-                                  ...prev,
-                                  completed_amount: Number(event.target.value) || 0,
-                                }))
-                              }
-                              step="0.01"
-                              type="number"
-                              value={formValues.completed_amount}
+                              className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              placeholder="I-chorak 2025 y"
+                              type="text"
+                              value={formValues[startKey]}
+                              onChange={(e) => setFormValues((prev) => ({ ...prev, [startKey]: e.target.value }))}
                             />
-                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-slate-500">so&apos;m</span>
                           </div>
-                          <p className="text-xs text-slate-500">
-                            Yakuniy summa: <span className="font-semibold text-slate-700">{formatMoney(finalTotalAmount)} so&apos;m</span>
-                          </p>
-                        </div>
-
-                        <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                          <label className="block text-xs font-bold tracking-wide text-slate-600 uppercase">
-                            2026-yil ulushi (%)
-                          </label>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <p className="mb-1 text-xs font-semibold text-slate-600">2026</p>
-                              <div className="relative">
-                                <input
-                                  className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 pr-8 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                  max={100}
-                                  min={0}
-                                  onChange={(event) => {
-                                    const value = Math.max(
-                                      0,
-                                      Math.min(100, Number(event.target.value) || 0)
-                                    );
-                                    setPlanned2026Percent(value);
-                                  }}
-                                  step="0.01"
-                                  type="number"
-                                  value={planned2026Percent}
-                                />
-                                <span className="absolute top-1/2 right-3 -translate-y-1/2 text-xs text-slate-500">%</span>
-                              </div>
-                            </div>
-                            <div>
-                              <p className="mb-1 text-xs font-semibold text-slate-600">2027</p>
-                              <div className="flex h-11 items-center rounded-lg border border-slate-300 bg-white px-4 text-slate-700">
-                                {planned2027Percent.toFixed(2)}%
-                              </div>
+                          <div>
+                            <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — tugashi</p>
+                            <input
+                              className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                              placeholder="III-chorak 2025 y"
+                              type="text"
+                              value={formValues[endKey]}
+                              onChange={(e) => setFormValues((prev) => ({ ...prev, [endKey]: e.target.value }))}
+                            />
+                          </div>
+                          <div>
+                            <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — summa</p>
+                            <div className="relative">
+                              <input
+                                className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 pr-12 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                min={0}
+                                step="0.01"
+                                type="number"
+                                value={formValues[amountKey]}
+                                onChange={(e) => setFormValues((prev) => ({ ...prev, [amountKey]: Number(e.target.value) || 0 }))}
+                              />
+                              <span className="absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-slate-400">so&apos;m</span>
                             </div>
                           </div>
                         </div>
-
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                          <p className="text-xs font-bold tracking-wide text-blue-800 uppercase">
-                            2026-yilga rejalashtirilgan (planned_amount)
-                          </p>
-                          <p className="mt-2 text-lg font-bold text-blue-900">
-                            {formatMoney(planned2026Amount)} so&apos;m
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-200 bg-white p-4">
-                          <p className="text-xs font-bold tracking-wide text-slate-600 uppercase">
-                            2027-yilga rejalashtirilgan
-                          </p>
-                          <p className="mt-2 text-lg font-bold text-slate-900">
-                            {formatMoney(planned2027Amount)} so&apos;m
-                          </p>
-                        </div>
-
-                        <div className="rounded-lg border border-slate-200 bg-white p-4 md:col-span-2">
-                          <p className="text-xs text-slate-500">
-                            Formula: <span className="font-semibold text-slate-700">planned_total = final_total_amount - completed_amount</span>
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            Tizimga yuboriladi: <span className="font-semibold text-slate-700">completed_amount</span> va{" "}
-                            <span className="font-semibold text-slate-700">planned_amount (2026)</span>.
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
                   </div>
                 </section>
 
