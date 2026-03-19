@@ -8,6 +8,7 @@ from .views import (
     DocumentCalculationRetrieveUpdateDestroyAPIView,
     DocumentCalculationXlsxImportAPIView,
     DocumentContractAPIView,
+    DocumentKalendarRejaAPIView,
     HealthCheckAPIView,
     NormativeCoefficientListAPIView,
     OrganizationSettingsAPIView,
@@ -47,6 +48,11 @@ urlpatterns = [
         "document-calculations/<int:pk>/contract/",
         DocumentContractAPIView.as_view(),
         name="document-calculation-contract",
+    ),
+    path(
+        "document-calculations/<int:pk>/kalendar-reja/",
+        DocumentKalendarRejaAPIView.as_view(),
+        name="document-calculation-kalendar-reja",
     ),
     path(
         "organization-settings/",

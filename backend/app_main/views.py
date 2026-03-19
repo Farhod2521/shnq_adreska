@@ -771,6 +771,18 @@ class DocumentContractAPIView(APIView):
         )
 
 
+class DocumentKalendarRejaAPIView(DocumentContractAPIView):
+    """Kalendar reja shablonini to'ldirib base64 .docx qaytaradi."""
+
+    TEMPLATE_NAME = "kalendar_reja.docx"
+
+    def get(self, request, pk):
+        response = super().get(request, pk)
+        if response.status_code == 200:
+            response.data["filename"] = f"kalendar_reja_{pk}.docx"
+        return response
+
+
 class OrganizationSettingsAPIView(APIView):
     """GET — sozlamalarni olish, PUT — yangilash."""
 

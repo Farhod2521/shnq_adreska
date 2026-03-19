@@ -296,6 +296,14 @@ export default function HujjatlarPage() {
   const [contractDocName, setContractDocName] = useState("");
   const contractPreviewRef = useRef<HTMLDivElement>(null);
 
+  // Kalendar reja
+  const [isKalendarModalOpen, setIsKalendarModalOpen] = useState(false);
+  const [isKalendarLoading, setIsKalendarLoading] = useState(false);
+  const [kalendarDocx64, setKalendarDocx64] = useState("");
+  const [kalendarFilename, setKalendarFilename] = useState("");
+  const [kalendarDocName, setKalendarDocName] = useState("");
+  const kalendarPreviewRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const previous = document.body.style.overflow;
     if (isModalOpen || isCreateModalOpen || isDeleteConfirmOpen) {
@@ -454,6 +462,60 @@ export default function HujjatlarPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = contractFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openKalendarModal = async (doc: DocumentCalculationItem) => {
+    setIsKalendarModalOpen(true);
+    setIsKalendarLoading(true);
+    setKalendarDocx64("");
+    setKalendarDocName(doc.name);
+    setKalendarFilename(`kalendar_reja_${doc.id}.docx`);
+    try {
+      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/kalendar-reja/`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error ?? "Kalendar rejani yuklashda xatolik yuz berdi.");
+        setIsKalendarModalOpen(false);
+        return;
+      }
+      const payload = (await res.json()) as { data: string; filename: string; doc_name: string };
+      setKalendarFilename(payload.filename);
+      setKalendarDocx64(payload.data);
+    } catch {
+      alert("Kalendar rejani yuklashda xatolik yuz berdi.");
+      setIsKalendarModalOpen(false);
+    } finally {
+      setIsKalendarLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!kalendarDocx64 || !kalendarPreviewRef.current) return;
+    const render = async () => {
+      const { renderAsync } = await import("docx-preview");
+      const binary = Uint8Array.from(atob(kalendarDocx64), (c) => c.charCodeAt(0));
+      if (kalendarPreviewRef.current) {
+        kalendarPreviewRef.current.innerHTML = "";
+        await renderAsync(binary.buffer as ArrayBuffer, kalendarPreviewRef.current, undefined, {
+          className: "docx-preview-wrapper",
+        });
+      }
+    };
+    void render();
+  }, [kalendarDocx64]);
+
+  const downloadKalendar = () => {
+    if (!kalendarDocx64) return;
+    const binary = Uint8Array.from(atob(kalendarDocx64), (c) => c.charCodeAt(0));
+    const blob = new Blob([binary], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = kalendarFilename;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -988,6 +1050,14 @@ export default function HujjatlarPage() {
                                 <span className="material-symbols-outlined text-[13px]">visibility</span>
                                 Shartnoma
                               </button>
+                              <button
+                                className="flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-100"
+                                onClick={() => openKalendarModal(doc)}
+                                type="button"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">visibility</span>
+                                Kalendar reja
+                              </button>
                             </div>
                           </td>
                           <td className="px-5 py-3.5 text-center">
@@ -1151,6 +1221,61 @@ export default function HujjatlarPage() {
               ) : (
                 <div
                   ref={contractPreviewRef}
+                  className="mx-auto max-w-4xl rounded-xl bg-white shadow"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kalendar reja modal */}
+      {isKalendarModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          onClick={() => setIsKalendarModalOpen(false)}
+        >
+          <div
+            className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ maxHeight: "92vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 bg-[#f0fdf4] px-6 py-4">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider text-emerald-700 uppercase">Kalendar reja</p>
+                <h2 className="mt-0.5 max-w-[52ch] truncate text-sm font-bold text-slate-900">{kalendarDocName}</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-emerald-700 disabled:opacity-40"
+                  disabled={!kalendarDocx64}
+                  onClick={downloadKalendar}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Word yuklab olish
+                </button>
+                <button
+                  className="flex size-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100"
+                  onClick={() => setIsKalendarModalOpen(false)}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-6">
+              {isKalendarLoading ? (
+                <div className="flex h-64 items-center justify-center gap-3 text-slate-400">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+                  <span className="text-sm">Yuklanmoqda...</span>
+                </div>
+              ) : (
+                <div
+                  ref={kalendarPreviewRef}
                   className="mx-auto max-w-4xl rounded-xl bg-white shadow"
                 />
               )}
