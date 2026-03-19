@@ -783,6 +783,18 @@ class DocumentKalendarRejaAPIView(DocumentContractAPIView):
         return response
 
 
+class DocumentTexnikTopshiriqAPIView(DocumentContractAPIView):
+    """Texnik topshiriq shablonini to'ldirib base64 .docx qaytaradi."""
+
+    TEMPLATE_NAME = "texnik_topshiriq.docx"
+
+    def get(self, request, pk):
+        response = super().get(request, pk)
+        if response.status_code == 200:
+            response.data["filename"] = f"texnik_topshiriq_{pk}.docx"
+        return response
+
+
 class OrganizationSettingsAPIView(APIView):
     """GET — sozlamalarni olish, PUT — yangilash."""
 
