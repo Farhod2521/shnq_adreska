@@ -395,8 +395,6 @@ export default function HujjatlarPage() {
       calculation_category: calculationCategories[0]?.id ?? "",
     });
     setStaffCounts({});
-    setPlanned2026Percent(100);
-    setIsPlanSplitOpen(false);
     setIsCreateModalOpen(true);
   };
 
