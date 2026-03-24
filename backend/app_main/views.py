@@ -364,7 +364,7 @@ class DocumentCalculationReportTableAPIView(APIView):
                 sections_by_name[category_name] = section_obj
                 sections.append(section_obj)
 
-            planned_amount = _q2(item.final_total_amount - item.completed_amount)
+            planned_amount = _q2(item.final_total_amount * item.current_year_percent / Decimal("100"))
             section = sections_by_name[category_name]
             order = len(section["rows"]) + 1
             section["rows"].append(
