@@ -750,6 +750,14 @@ class DocumentContractAPIView(APIView):
             "executor_organization": doc.executor_organization or "",
             "development_deadline": doc.development_deadline or "",
             "shartnoma_number": doc.contract_number or "",
+            "current_year_percent": str(doc.current_year_percent),
+            "next_year_percent": str(max(Decimal("0"), Decimal("100") - doc.current_year_percent)),
+            "current_year_amount": str(
+                (doc.final_total_amount * doc.current_year_percent / Decimal("100")).quantize(Decimal("0.01"))
+            ),
+            "next_year_amount": str(
+                (doc.final_total_amount * max(Decimal("0"), Decimal("100") - doc.current_year_percent) / Decimal("100")).quantize(Decimal("0.01"))
+            ),
             "notes": doc.notes or "",
             "final_total_amount": str(doc.final_total_amount),
             "final_total_amount_words": number_to_uz_words(doc.final_total_amount),

@@ -54,6 +54,7 @@ type DocumentFormValues = {
   complexity_level: ComplexityLevel;
   document_category: DocumentCategory;
   is_research_required: boolean;
+  current_year_percent: number;
   development_deadline: string;
   executor_organization: string;
   contract_number: string;
@@ -86,6 +87,7 @@ type DocumentCalculationItem = {
   document_category: DocumentCategory;
   complexity_level: ComplexityLevel;
   is_research_required: boolean;
+  current_year_percent?: string;
   development_deadline?: string;
   executor_organization?: string;
   contract_number?: string;
@@ -281,6 +283,7 @@ const getInitialFormValues = (): DocumentFormValues => ({
   complexity_level: "1",
   document_category: "new",
   is_research_required: false,
+  current_year_percent: 0,
   development_deadline: "",
   executor_organization: "",
   contract_number: "",
@@ -340,6 +343,8 @@ export default function HujjatlarPage() {
   const [texnikFilename, setTexnikFilename] = useState("");
   const [texnikDocName, setTexnikDocName] = useState("");
   const texnikPreviewRef = useRef<HTMLDivElement>(null);
+
+  const [isKalendarSectionOpen, setIsKalendarSectionOpen] = useState(false);
 
   // Kalendar reja
   const [isKalendarModalOpen, setIsKalendarModalOpen] = useState(false);
@@ -414,6 +419,7 @@ export default function HujjatlarPage() {
       complexity_level: document.complexity_level ?? "1",
       document_category: document.document_category ?? "new",
       is_research_required: Boolean(document.is_research_required),
+      current_year_percent: toNumber(document.current_year_percent),
       development_deadline: document.development_deadline ?? "",
       executor_organization: document.executor_organization ?? "",
       contract_number: document.contract_number ?? "",
@@ -436,6 +442,7 @@ export default function HujjatlarPage() {
       return acc;
     }, {});
     setStaffCounts(snapshotCounts);
+    setIsKalendarSectionOpen(true);
     setIsCreateModalOpen(true);
   };
 
@@ -443,6 +450,7 @@ export default function HujjatlarPage() {
     setIsCreateModalOpen(false);
     setEditingDocumentId(null);
     setFormError("");
+    setIsKalendarSectionOpen(false);
   };
 
   const openDeleteConfirm = (document: DocumentCalculationItem) => {
@@ -808,6 +816,7 @@ export default function HujjatlarPage() {
           document_category: formValues.document_category,
           complexity_level: formValues.complexity_level,
           is_research_required: formValues.is_research_required,
+          current_year_percent: Number(formValues.current_year_percent.toFixed(2)),
           development_deadline: formValues.development_deadline.trim(),
           executor_organization: formValues.executor_organization.trim(),
           contract_number: formValues.contract_number.trim(),
@@ -1951,62 +1960,106 @@ export default function HujjatlarPage() {
 
                   {/* Kalendar reja */}
                   <div className="mt-5 rounded-xl border border-primary/20 bg-white">
-                    <div className="flex items-center justify-between border-b border-primary/15 px-4 py-3">
+                    {/* Header — toggle */}
+                    <button
+                      className="flex w-full items-center justify-between px-4 py-3 transition-colors hover:bg-primary/5"
+                      onClick={() => setIsKalendarSectionOpen((prev) => !prev)}
+                      type="button"
+                    >
                       <span className="text-sm font-bold text-primary">Kalendar reja</span>
-                      <span className="text-xs text-slate-500">
-                        Jami: <span className="font-semibold text-slate-700">{formatMoney(finalTotalAmount)} so&apos;m</span>
-                        {finalTotalAmount > 0 && (
-                          <span className="ml-2 text-slate-400">
-                            ({finalTotalAmount > BILLION ? "1 mlrd dan yuqori → I bosqich 15%" : "1 mlrd dan past → I bosqich 30%"})
-                          </span>
-                        )}
+                      <span className="material-symbols-outlined text-[20px] text-primary transition-transform" style={{ transform: isKalendarSectionOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+                        expand_more
                       </span>
-                    </div>
-                    <div className="space-y-3 p-4">
-                      {([
-                        { num: 1, label: "I bosqich", startKey: "stage1_start", endKey: "stage1_end", amountKey: "stage1_amount" },
-                        { num: 2, label: "II bosqich", startKey: "stage2_start", endKey: "stage2_end", amountKey: "stage2_amount" },
-                        { num: 3, label: "III bosqich", startKey: "stage3_start", endKey: "stage3_end", amountKey: "stage3_amount" },
-                        { num: 4, label: "IV bosqich", startKey: "stage4_start", endKey: "stage4_end", amountKey: "stage4_amount" },
-                      ] as const).map(({ label, startKey, endKey, amountKey }) => (
-                        <div key={label} className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-3">
+                    </button>
+
+                    {isKalendarSectionOpen && (
+                      <div className="border-t border-primary/15 p-4 space-y-4">
+                        {/* Joriy / keyingi yil foizi */}
+                        <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — boshlanishi</p>
-                            <input
-                              className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                              placeholder="I-chorak 2025 y"
-                              type="text"
-                              value={formValues[startKey]}
-                              onChange={(e) => setFormValues((prev) => ({ ...prev, [startKey]: e.target.value }))}
-                            />
-                          </div>
-                          <div>
-                            <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — tugashi</p>
-                            <input
-                              className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                              placeholder="III-chorak 2025 y"
-                              type="text"
-                              value={formValues[endKey]}
-                              onChange={(e) => setFormValues((prev) => ({ ...prev, [endKey]: e.target.value }))}
-                            />
-                          </div>
-                          <div>
-                            <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — summa</p>
+                            <p className="mb-1.5 text-xs font-bold text-slate-600 uppercase">Joriy yil (%)</p>
                             <div className="relative">
                               <input
-                                className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 pr-12 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 pr-8 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                max={100}
                                 min={0}
                                 step="0.01"
                                 type="number"
-                                value={formValues[amountKey]}
-                                onChange={(e) => setFormValues((prev) => ({ ...prev, [amountKey]: Number(e.target.value) || 0 }))}
+                                value={formValues.current_year_percent}
+                                onChange={(e) => {
+                                  const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                  setFormValues((prev) => ({ ...prev, current_year_percent: val }));
+                                }}
                               />
-                              <span className="absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-slate-400">so&apos;m</span>
+                              <span className="absolute top-1/2 right-2.5 -translate-y-1/2 text-xs text-slate-400">%</span>
                             </div>
+                            {finalTotalAmount > 0 && (
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                = <span className="font-semibold text-slate-700">{formatMoney(finalTotalAmount * formValues.current_year_percent / 100)}</span> so&apos;m
+                              </p>
+                            )}
+                          </div>
+                          <div>
+                            <p className="mb-1.5 text-xs font-bold text-slate-600 uppercase">Keyingi yil (%)</p>
+                            <div className="flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-700">
+                              {Math.max(0, 100 - formValues.current_year_percent).toFixed(2)}%
+                            </div>
+                            {finalTotalAmount > 0 && (
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                = <span className="font-semibold text-slate-700">{formatMoney(finalTotalAmount * Math.max(0, 100 - formValues.current_year_percent) / 100)}</span> so&apos;m
+                              </p>
+                            )}
                           </div>
                         </div>
-                      ))}
-                    </div>
+
+                        {/* 4 bosqich */}
+                        <div className="space-y-3">
+                          {([
+                            { label: "I bosqich", startKey: "stage1_start", endKey: "stage1_end", amountKey: "stage1_amount" },
+                            { label: "II bosqich", startKey: "stage2_start", endKey: "stage2_end", amountKey: "stage2_amount" },
+                            { label: "III bosqich", startKey: "stage3_start", endKey: "stage3_end", amountKey: "stage3_amount" },
+                            { label: "IV bosqich", startKey: "stage4_start", endKey: "stage4_end", amountKey: "stage4_amount" },
+                          ] as const).map(({ label, startKey, endKey, amountKey }) => (
+                            <div key={label} className="grid grid-cols-1 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 md:grid-cols-3">
+                              <div>
+                                <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — boshlanishi</p>
+                                <input
+                                  className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                  placeholder="I-chorak 2025 y"
+                                  type="text"
+                                  value={formValues[startKey]}
+                                  onChange={(e) => setFormValues((prev) => ({ ...prev, [startKey]: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — tugashi</p>
+                                <input
+                                  className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                  placeholder="III-chorak 2025 y"
+                                  type="text"
+                                  value={formValues[endKey]}
+                                  onChange={(e) => setFormValues((prev) => ({ ...prev, [endKey]: e.target.value }))}
+                                />
+                              </div>
+                              <div>
+                                <p className="mb-1 text-xs font-bold text-slate-600 uppercase">{label} — summa</p>
+                                <div className="relative">
+                                  <input
+                                    className="h-9 w-full rounded-lg border border-slate-300 bg-white px-3 pr-12 text-sm text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                                    min={0}
+                                    step="0.01"
+                                    type="number"
+                                    value={formValues[amountKey]}
+                                    onChange={(e) => setFormValues((prev) => ({ ...prev, [amountKey]: Number(e.target.value) || 0 }))}
+                                  />
+                                  <span className="absolute top-1/2 right-2 -translate-y-1/2 text-[10px] text-slate-400">so&apos;m</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </section>
 

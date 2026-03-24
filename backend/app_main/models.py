@@ -162,6 +162,14 @@ class DocumentCalculation(models.Model):
         default=0,
         verbose_name="2026-yilga rejalashtirilgan",
     )
+    # Joriy va keyingi yil taqsimoti
+    current_year_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        verbose_name="Joriy yil foizi (%)",
+    )
+
     # Kalendar reja — 4 bosqich
     stage1_start = models.CharField(max_length=100, blank=True, default="", verbose_name="I bosqich boshlanishi")
     stage1_end = models.CharField(max_length=100, blank=True, default="", verbose_name="I bosqich tugashi")
