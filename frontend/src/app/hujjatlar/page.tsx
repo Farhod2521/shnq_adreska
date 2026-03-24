@@ -56,6 +56,7 @@ type DocumentFormValues = {
   is_research_required: boolean;
   development_deadline: string;
   executor_organization: string;
+  contract_number: string;
   notes: string;
   stage1_start: string;
   stage1_end: string;
@@ -87,6 +88,7 @@ type DocumentCalculationItem = {
   is_research_required: boolean;
   development_deadline?: string;
   executor_organization?: string;
+  contract_number?: string;
   notes?: string;
   selected_base_coefficient: string;
   selected_complexity_coefficient: string;
@@ -281,6 +283,7 @@ const getInitialFormValues = (): DocumentFormValues => ({
   is_research_required: false,
   development_deadline: "",
   executor_organization: "",
+  contract_number: "",
   notes: "",
   stage1_start: "",
   stage1_end: "",
@@ -413,6 +416,7 @@ export default function HujjatlarPage() {
       is_research_required: Boolean(document.is_research_required),
       development_deadline: document.development_deadline ?? "",
       executor_organization: document.executor_organization ?? "",
+      contract_number: document.contract_number ?? "",
       notes: document.notes ?? "",
       stage1_start: document.stage1_start ?? "",
       stage1_end: document.stage1_end ?? "",
@@ -806,6 +810,7 @@ export default function HujjatlarPage() {
           is_research_required: formValues.is_research_required,
           development_deadline: formValues.development_deadline.trim(),
           executor_organization: formValues.executor_organization.trim(),
+          contract_number: formValues.contract_number.trim(),
           notes: formValues.notes.trim(),
           staff_counts: Object.fromEntries(
             Object.entries(staffCounts).map(([key, value]) => [key, Number(value) || 0])
@@ -1831,6 +1836,21 @@ export default function HujjatlarPage() {
                         placeholder="Masalan: Texnik me&apos;yorlash va standartlashtirish ITI"
                         type="text"
                         value={formValues.executor_organization}
+                      />
+                    </div>
+                    <div className="md:col-span-1">
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">Shartnoma raqami</label>
+                      <input
+                        className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            contract_number: event.target.value,
+                          }))
+                        }
+                        placeholder="Masalan: 12/2026"
+                        type="text"
+                        value={formValues.contract_number}
                       />
                     </div>
                     <div className="md:col-span-3">

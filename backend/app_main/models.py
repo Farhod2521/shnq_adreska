@@ -188,6 +188,12 @@ class DocumentCalculation(models.Model):
         default="",
         verbose_name="Ishni bajaruvchi tashkilot",
     )
+    contract_number = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name="Shartnoma raqami",
+    )
     notes = models.TextField(
         blank=True,
         default="",

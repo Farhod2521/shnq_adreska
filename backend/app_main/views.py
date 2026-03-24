@@ -522,6 +522,7 @@ import re
 
 BOLD_PLACEHOLDERS = {
     "shnq_name",
+    "shartnoma_number",
     "institute_director",
     "deputy_minister",
     "economics_head",
@@ -748,6 +749,7 @@ class DocumentContractAPIView(APIView):
             "complexity_level": str(doc.complexity_level),
             "executor_organization": doc.executor_organization or "",
             "development_deadline": doc.development_deadline or "",
+            "shartnoma_number": doc.contract_number or "",
             "notes": doc.notes or "",
             "final_total_amount": str(doc.final_total_amount),
             "final_total_amount_words": number_to_uz_words(doc.final_total_amount),

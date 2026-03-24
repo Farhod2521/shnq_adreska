@@ -82,6 +82,7 @@ class DocumentCalculationSerializer(serializers.ModelSerializer):
             "stage4_amount",
             "development_deadline",
             "executor_organization",
+            "contract_number",
             "notes",
             "created_at",
             "updated_at",
@@ -118,6 +119,7 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
     stage4_amount = serializers.DecimalField(max_digits=18, decimal_places=2, required=False, default="0.00")
     development_deadline = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     executor_organization = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+    contract_number = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     notes = serializers.CharField(required=False, allow_blank=True, default="")
     staff_counts = serializers.DictField(child=serializers.IntegerField(min_value=0), required=False)
 
