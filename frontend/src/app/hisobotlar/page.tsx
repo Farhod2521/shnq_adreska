@@ -11,6 +11,7 @@ type ReportRow = {
   total_amount: string;
   completed_amount: string;
   planned_amount: string;
+  next_year_amount: string;
   development_deadline: string;
   executor_organization: string;
   notes: string;
@@ -23,6 +24,7 @@ type ReportSection = {
     total_amount: string;
     completed_amount: string;
     planned_amount: string;
+    next_year_amount: string;
   };
 };
 
@@ -32,6 +34,7 @@ type ReportPayload = {
     total_amount: string;
     completed_amount: string;
     planned_amount: string;
+    next_year_amount: string;
     unallocated_limit: string;
     grand_total: string;
   };
@@ -49,6 +52,7 @@ const emptySummary = {
   total_amount: "0",
   completed_amount: "0",
   planned_amount: "0",
+  next_year_amount: "0",
   unallocated_limit: "0",
   grand_total: "0",
 };
@@ -338,6 +342,7 @@ export default function HisobotlarPage() {
                       <th className="border border-slate-600 px-2 py-2 text-center font-semibold">Umumiy narxi</th>
                       <th className="border border-slate-600 px-2 py-2 text-center font-semibold">01.01.2026 holatiga</th>
                       <th className="border border-slate-600 px-2 py-2 text-center font-semibold">2026-yilga reja</th>
+                      <th className="border border-slate-600 px-2 py-2 text-center font-semibold">2027-yilga reja</th>
                       <th className="border border-slate-600 px-2 py-2 text-center font-semibold">Ishlab chiqish muddati</th>
                       <th className="border border-slate-600 px-2 py-2 text-left font-semibold">Ijrochi tashkilot</th>
                       <th className="border border-slate-600 px-2 py-2 text-left font-semibold">Izoh</th>
@@ -386,6 +391,9 @@ export default function HisobotlarPage() {
                               <td className="border border-slate-600 px-2 py-3 text-right font-semibold">
                                 {formatMoney(item.planned_amount)}
                               </td>
+                              <td className="border border-slate-600 px-2 py-3 text-right">
+                                {Number(item.next_year_amount) > 0 ? formatMoney(item.next_year_amount) : "-"}
+                              </td>
                               <td className="border border-slate-600 px-2 py-3 text-center">
                                 {item.development_deadline || "-"}
                               </td>
@@ -410,6 +418,9 @@ export default function HisobotlarPage() {
                             <td className="border border-slate-600 px-2 py-2 text-right">
                               {formatMoney(section.totals.planned_amount)}
                             </td>
+                            <td className="border border-slate-600 px-2 py-2 text-right">
+                              {Number(section.totals.next_year_amount) > 0 ? formatMoney(section.totals.next_year_amount) : "-"}
+                            </td>
                             <td className="border border-slate-600 px-2 py-2" colSpan={3} />
                           </tr>
                         </Fragment>
@@ -423,7 +434,7 @@ export default function HisobotlarPage() {
                           <td className="border border-slate-600 px-2 py-2 text-right">
                             {formatMoney(summary.unallocated_limit)}
                           </td>
-                          <td className="border border-slate-600 px-2 py-2" colSpan={3} />
+                          <td className="border border-slate-600 px-2 py-2" colSpan={4} />
                         </tr>
                         <tr className="bg-slate-50 font-bold">
                           <td className="border border-slate-600 px-2 py-2 text-right" colSpan={2}>
@@ -438,6 +449,9 @@ export default function HisobotlarPage() {
                           <td className="border border-slate-600 px-2 py-2 text-right">
                             {formatMoney(summary.planned_amount)}
                           </td>
+                          <td className="border border-slate-600 px-2 py-2 text-right">
+                            {Number(summary.next_year_amount) > 0 ? formatMoney(summary.next_year_amount) : "-"}
+                          </td>
                           <td className="border border-slate-600 px-2 py-2" colSpan={3} />
                         </tr>
                         <tr className="bg-white font-extrabold">
@@ -447,7 +461,7 @@ export default function HisobotlarPage() {
                           <td className="border border-slate-600 px-2 py-2 text-right">
                             {formatMoney(summary.grand_total)}
                           </td>
-                          <td className="border border-slate-600 px-2 py-2" colSpan={3} />
+                          <td className="border border-slate-600 px-2 py-2" colSpan={4} />
                         </tr>
                       </>
                     )}

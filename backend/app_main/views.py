@@ -344,6 +344,7 @@ class DocumentCalculationReportTableAPIView(APIView):
         total_amount_all = Decimal("0.00")
         completed_amount_all = Decimal("0.00")
         planned_amount_all = Decimal("0.00")
+        next_year_amount_all = Decimal("0.00")
 
         for item in queryset:
             category_name = (
@@ -359,6 +360,7 @@ class DocumentCalculationReportTableAPIView(APIView):
                         "total_amount": Decimal("0.00"),
                         "completed_amount": Decimal("0.00"),
                         "planned_amount": Decimal("0.00"),
+                        "next_year_amount": Decimal("0.00"),
                     },
                 }
                 sections_by_name[category_name] = section_obj
@@ -366,8 +368,13 @@ class DocumentCalculationReportTableAPIView(APIView):
 
             if item.current_year_percent:
                 planned_amount = _q2(item.final_total_amount * item.current_year_percent / Decimal("100"))
+                next_year_amount = _q2(
+                    item.final_total_amount * max(Decimal("0"), Decimal("100") - item.current_year_percent) / Decimal("100")
+                )
             else:
                 planned_amount = _q2(item.final_total_amount - item.completed_amount)
+                next_year_amount = Decimal("0.00")
+
             section = sections_by_name[category_name]
             order = len(section["rows"]) + 1
             section["rows"].append(
@@ -378,6 +385,7 @@ class DocumentCalculationReportTableAPIView(APIView):
                     "total_amount": _q2(item.final_total_amount),
                     "completed_amount": _q2(item.completed_amount),
                     "planned_amount": planned_amount,
+                    "next_year_amount": next_year_amount,
                     "development_deadline": item.development_deadline,
                     "executor_organization": item.executor_organization,
                     "notes": item.notes,
@@ -387,19 +395,23 @@ class DocumentCalculationReportTableAPIView(APIView):
             section["totals"]["total_amount"] += _q2(item.final_total_amount)
             section["totals"]["completed_amount"] += _q2(item.completed_amount)
             section["totals"]["planned_amount"] += planned_amount
+            section["totals"]["next_year_amount"] += next_year_amount
 
             total_amount_all += _q2(item.final_total_amount)
             completed_amount_all += _q2(item.completed_amount)
             planned_amount_all += planned_amount
+            next_year_amount_all += next_year_amount
 
         for section in sections:
             section["totals"]["total_amount"] = str(_q2(section["totals"]["total_amount"]))
             section["totals"]["completed_amount"] = str(_q2(section["totals"]["completed_amount"]))
             section["totals"]["planned_amount"] = str(_q2(section["totals"]["planned_amount"]))
+            section["totals"]["next_year_amount"] = str(_q2(section["totals"]["next_year_amount"]))
             for row in section["rows"]:
                 row["total_amount"] = str(_q2(row["total_amount"]))
                 row["completed_amount"] = str(_q2(row["completed_amount"]))
                 row["planned_amount"] = str(_q2(row["planned_amount"]))
+                row["next_year_amount"] = str(_q2(row["next_year_amount"]))
 
         total_limit = _to_decimal(os.getenv("REPORT_TOTAL_LIMIT"), default=Decimal("0.00"))
         unallocated_limit = _q2(total_limit - planned_amount_all) if total_limit > planned_amount_all else Decimal("0.00")
@@ -411,6 +423,7 @@ class DocumentCalculationReportTableAPIView(APIView):
                 "total_amount": str(_q2(total_amount_all)),
                 "completed_amount": str(_q2(completed_amount_all)),
                 "planned_amount": str(_q2(planned_amount_all)),
+                "next_year_amount": str(_q2(next_year_amount_all)),
                 "unallocated_limit": str(unallocated_limit),
                 "grand_total": str(grand_total),
             },
