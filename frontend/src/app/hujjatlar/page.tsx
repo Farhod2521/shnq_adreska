@@ -58,8 +58,7 @@ type DocumentFormValues = {
 };
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
-const FORMULA_MULTIPLIER = 2.3;
-const MROT_VALUE = 1_271_000;
+const MROT_VALUE = 412_000;
 const HIGH_AMOUNT_THRESHOLD = 2_472_000_000;
 
 // 12-jadval: VHM/sahifa qiymatlari (normativ_turi → murakkablik → hujjat_toifasi)
@@ -294,9 +293,9 @@ const formatMoney = (value: number): string =>
 
 const categoryLabelMap: Record<DocumentCategory, string> = {
   new: "Yangi",
-  rework_harmonization: "Qayta ishlash: uyg'unlashtirish",
+  rework_harmonization: "Qayta",
   rework_modification: "Qayta ishlash: muvofiqlashtirish",
-  additional_change: "Qo'shimcha o'zgartirish",
+  additional_change: "O'zgartirish",
 };
 
 const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: string }> = {
@@ -374,6 +373,7 @@ export default function HujjatlarPage() {
   const texnikPreviewRef = useRef<HTMLDivElement>(null);
 
   const [isKalendarSectionOpen, setIsKalendarSectionOpen] = useState(false);
+  const [isJadvalPopupOpen, setIsJadvalPopupOpen] = useState(false);
 
   // Kalendar reja
   const [isKalendarModalOpen, setIsKalendarModalOpen] = useState(false);
@@ -701,9 +701,8 @@ export default function HujjatlarPage() {
     formValues.document_category as Table12Key,
   );
 
-  // Yangi formula: VHM × sahifalar_soni × MROT × 2.3
-  const finalTotalAmount = vhmValue * toNumber(formValues.total_pages) * MROT_VALUE * FORMULA_MULTIPLIER;
-  const researchCoefficient = formValues.is_research_required ? 1.4 : 1.0;
+  // Yangi formula: VHM × sahifalar_soni × 412000 × 2.1 × 1.12 × 1.4
+  const finalTotalAmount = vhmValue * toNumber(formValues.total_pages) * MROT_VALUE * 2.1 * 1.12 * 1.4;
 
   // Kalendar reja — avtomatik hisoblangan bosqich summalar
   const BILLION = 1_000_000_000;
@@ -1632,96 +1631,86 @@ export default function HujjatlarPage() {
                         </div>
                       </div>
                     </div>
-                    {/* 1) Hujjat turi */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat turi</label>
-                      <select
-                        className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        onChange={(event) =>
-                          setFormValues((prev) => ({ ...prev, normative_type: event.target.value }))
-                        }
-                        value={formValues.normative_type}
-                      >
-                        <option value="">Tanlang...</option>
-                        {normativeOptions.map((item) => (
-                          <option key={item.id} value={item.normative_type}>
-                            {item.normative_type_label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {/* 2) Murakkablik toifasi */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">Murakkablik toifasi</label>
-                      <select
-                        className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        onChange={(event) =>
-                          setFormValues((prev) => ({
-                            ...prev,
-                            complexity_level: event.target.value as ComplexityLevel,
-                          }))
-                        }
-                        value={formValues.complexity_level}
-                      >
-                        <option value="1">I toifa</option>
-                        <option value="2">II toifa</option>
-                        <option value="3">III toifa</option>
-                      </select>
-                    </div>
-                    {/* VHM ko'rsatgich */}
-                    <div className="flex items-end">
-                      <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">12-jadval VHM qiymati</p>
-                        <p className="mt-1 text-2xl font-black text-primary">
-                          {vhmValue > 0 ? vhmValue : "—"}
-                        </p>
-                        <p className="text-xs text-slate-500">VHM/sahifa</p>
-                      </div>
-                    </div>
-                    {/* 3) Hujjat toifasi */}
+                    {/* Hujjat turi | Murakkablik | Hujjat toifasi | Jadval icon — bitta qatorda */}
                     <div className="md:col-span-3">
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat toifasi</label>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        {(
-                          [
-                            { value: "new", label: "Yangi" },
-                            { value: "rework_harmonization", label: "Qayta ishlash: uygʿunlashtirish" },
-                            { value: "rework_modification", label: "Qayta ishlash: muvofiqlashtirish" },
-                            { value: "additional_change", label: "Qoʻshimcha oʻzgartirish" },
-                          ] as { value: DocumentCategory; label: string }[]
-                        ).map((opt) => {
-                          const vhm = getVhmValue(formValues.normative_type, formValues.complexity_level, opt.value as Table12Key);
-                          return (
-                            <label
-                              key={opt.value}
-                              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors ${
-                                formValues.document_category === opt.value
-                                  ? "border-primary bg-primary/5 text-primary font-semibold"
-                                  : "border-slate-300 bg-white text-slate-700 hover:border-primary/40"
-                              }`}
-                            >
-                              <input
-                                className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
-                                checked={formValues.document_category === opt.value}
-                                name="hujjat_toifasi"
-                                onChange={() =>
-                                  setFormValues((prev) => ({ ...prev, document_category: opt.value }))
-                                }
-                                type="radio"
-                                value={opt.value}
-                              />
-                              <span className="flex-1">{opt.label}</span>
-                              {vhm > 0 && (
-                                <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">
-                                  {vhm}
-                                </span>
-                              )}
-                            </label>
-                          );
-                        })}
+                      <div className="grid grid-cols-12 gap-4 items-end">
+                        {/* Hujjat turi — col-4 */}
+                        <div className="col-span-12 md:col-span-4">
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat turi</label>
+                          <select
+                            className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            onChange={(event) =>
+                              setFormValues((prev) => ({ ...prev, normative_type: event.target.value }))
+                            }
+                            value={formValues.normative_type}
+                          >
+                            <option value="">Tanlang...</option>
+                            {normativeOptions.map((item) => (
+                              <option key={item.id} value={item.normative_type}>
+                                {item.normative_type_label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        {/* Murakkablik toifasi — col-3 */}
+                        <div className="col-span-12 md:col-span-3">
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">Murakkablik toifasi</label>
+                          <select
+                            className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            onChange={(event) =>
+                              setFormValues((prev) => ({
+                                ...prev,
+                                complexity_level: event.target.value as ComplexityLevel,
+                              }))
+                            }
+                            value={formValues.complexity_level}
+                          >
+                            <option value="1">I toifa</option>
+                            <option value="2">II toifa</option>
+                            <option value="3">III toifa</option>
+                          </select>
+                        </div>
+                        {/* Hujjat toifasi — col-3 */}
+                        <div className="col-span-12 md:col-span-3">
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat toifasi</label>
+                          <select
+                            className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            onChange={(event) =>
+                              setFormValues((prev) => ({
+                                ...prev,
+                                document_category: event.target.value as DocumentCategory,
+                              }))
+                            }
+                            value={formValues.document_category}
+                          >
+                            <option value="new">Yangi</option>
+                            <option value="rework_harmonization">Qayta</option>
+                            <option value="additional_change">O&apos;zgartirish</option>
+                          </select>
+                          {vhmValue > 0 && (
+                            <p className="mt-1 text-xs font-semibold text-primary">
+                              VHM: {vhmValue} VHM/sahifa
+                            </p>
+                          )}
+                        </div>
+                        {/* 12-jadval icon — col-2 */}
+                        <div className="col-span-12 md:col-span-2">
+                          <label className="mb-2 block text-sm font-semibold text-slate-700 invisible">
+                            Jadval
+                          </label>
+                          <button
+                            className="flex h-12 w-full items-center justify-center gap-1.5 rounded-lg border-2 border-primary/30 bg-primary/5 text-primary transition-colors hover:bg-primary/10 hover:border-primary/50"
+                            onClick={() => setIsJadvalPopupOpen(true)}
+                            title="12-jadval"
+                            type="button"
+                          >
+                            <span className="material-symbols-outlined text-[22px]">table_chart</span>
+                            <span className="text-xs font-bold">Jadval</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                    {/* 4) Sahifalar soni — oxirida */}
+                    {/* Sahifalar soni */}
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">Umumiy sahifalar soni</label>
                       <div className="relative">
@@ -1737,54 +1726,6 @@ export default function HujjatlarPage() {
                         />
                         <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-slate-400">bet</span>
                       </div>
-                    </div>
-                    <div className="md:col-span-3">
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Tadqiqot o&apos;tkazilishi belgilangan normativ hujjatmi?
-                      </label>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
-                          <span className="flex items-center gap-2">
-                            <input
-                              checked={formValues.is_research_required}
-                              className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
-                              name="research_required"
-                              onChange={() =>
-                                setFormValues((prev) => ({ ...prev, is_research_required: true }))
-                              }
-                              type="radio"
-                              value="yes"
-                            />
-                            Ha
-                          </span>
-                          <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                            1.4
-                          </span>
-                        </label>
-                        <label className="flex cursor-pointer items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
-                          <span className="flex items-center gap-2">
-                            <input
-                              checked={!formValues.is_research_required}
-                              className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
-                              name="research_required"
-                              onChange={() =>
-                                setFormValues((prev) => ({ ...prev, is_research_required: false }))
-                              }
-                              type="radio"
-                              value="no"
-                            />
-                            Yo&apos;q
-                          </span>
-                          <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                            1.0
-                          </span>
-                        </label>
-                      </div>
-                      <p className="mt-2 text-xs text-slate-500">
-                        Tanlangan tadqiqot koeffitsienti:{" "}
-                        <span className="font-semibold text-slate-700">{researchCoefficient.toFixed(1)}</span>
-                      </p>
-                      <input name="research_coefficient" type="hidden" value={researchCoefficient} />
                     </div>
 
                     <div className="md:col-span-3">
@@ -1875,8 +1816,8 @@ export default function HujjatlarPage() {
                       <span className="mb-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
                         MROT × K
                       </span>
-                      <div className="text-2xl font-black text-primary">
-                        {formatMoney(MROT_VALUE)} × {FORMULA_MULTIPLIER}
+                      <div className="text-lg font-black text-primary">
+                        {formatMoney(MROT_VALUE)} × 2.1 × 1.12 × 1.4
                       </div>
                       <span className="text-xs text-slate-500">so&apos;m</span>
                     </div>
@@ -1889,7 +1830,7 @@ export default function HujjatlarPage() {
                     </div>
                   </div>
                   <p className="mt-4 text-xs text-slate-500">
-                    Formula: VHM × sahifa_soni × MROT × {FORMULA_MULTIPLIER}
+                    Formula: VHM × sahifa_soni × 412,000 × 2.1 × 1.12 × 1.4
                   </p>
 
                   {/* Kalendar reja */}
@@ -2019,6 +1960,121 @@ export default function HujjatlarPage() {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 12-jadval popup */}
+      {isJadvalPopupOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/65 p-4 backdrop-blur-sm"
+          onClick={() => setIsJadvalPopupOpen(false)}
+        >
+          <div
+            className="w-full max-w-4xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ maxHeight: "90vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-slate-100 bg-[#f8f9ff] px-6 py-4">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider text-primary uppercase">12-jadval</p>
+                <h2 className="mt-0.5 text-sm font-bold text-slate-900">VHM/sahifa koeffitsienti</h2>
+              </div>
+              <button
+                className="flex size-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100"
+                onClick={() => setIsJadvalPopupOpen(false)}
+                type="button"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <div className="overflow-auto p-4" style={{ maxHeight: "calc(90vh - 80px)" }}>
+              <table className="w-full border-collapse text-xs">
+                <thead>
+                  <tr>
+                    <th className="border border-slate-300 bg-slate-100 px-3 py-2 text-left text-xs font-bold text-slate-700" rowSpan={2}>
+                      Hujjat turi
+                    </th>
+                    <th className="border border-slate-300 bg-slate-100 px-3 py-2 text-center text-xs font-bold text-slate-700" rowSpan={2}>
+                      Toifa
+                    </th>
+                    {(["new", "rework_harmonization", "additional_change"] as const).map((cat) => (
+                      <th
+                        key={cat}
+                        className={`border border-slate-300 px-3 py-2 text-center text-xs font-bold ${
+                          formValues.document_category === cat
+                            ? "bg-primary text-white"
+                            : "bg-slate-100 text-slate-700"
+                        }`}
+                      >
+                        {categoryLabelMap[cat]}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["technical_regulation", "shnq", "srn", "eurocode", "qr", "mqn", "standard", "methodical_guide"] as const).flatMap((normType) => {
+                    const isSelectedType = formValues.normative_type === normType;
+                    const typeLabel = normativeTypeLabelMap[normType] || normType.replace(/_/g, " ");
+                    return (["1", "2", "3"] as ComplexityLevel[]).map((level, levelIdx) => {
+                      const isSelectedRow = isSelectedType && formValues.complexity_level === level;
+                      return (
+                        <tr
+                          key={`${normType}-${level}`}
+                          className={isSelectedRow ? "bg-primary/15" : isSelectedType ? "bg-primary/5" : ""}
+                        >
+                          {levelIdx === 0 && (
+                            <td
+                              className={`border border-slate-300 px-3 py-2 text-xs font-semibold ${
+                                isSelectedType ? "bg-primary/10 text-primary" : "text-slate-700"
+                              }`}
+                              rowSpan={3}
+                            >
+                              {typeLabel}
+                            </td>
+                          )}
+                          <td
+                            className={`border border-slate-300 px-3 py-2 text-center text-xs font-semibold ${
+                              isSelectedRow ? "text-primary" : "text-slate-500"
+                            }`}
+                          >
+                            {level === "1" ? "I" : level === "2" ? "II" : "III"}
+                          </td>
+                          {(["new", "rework_harmonization", "additional_change"] as const).map((cat) => {
+                            const val = TABLE_12[normType]?.[level]?.[cat] ?? 0;
+                            const isSelectedCell = isSelectedRow && formValues.document_category === cat;
+                            return (
+                              <td
+                                key={cat}
+                                className={`border border-slate-300 px-3 py-2 text-center tabular-nums ${
+                                  isSelectedCell
+                                    ? "bg-primary font-black text-sm text-white"
+                                    : isSelectedRow
+                                    ? "bg-primary/10 font-semibold text-primary"
+                                    : isSelectedType && formValues.document_category === cat
+                                    ? "bg-primary/8 text-slate-700"
+                                    : "text-slate-700"
+                                }`}
+                              >
+                                {val}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    });
+                  })}
+                </tbody>
+              </table>
+              <p className="mt-3 text-xs text-slate-500">
+                Hozirgi tanlov:{" "}
+                <span className="font-semibold text-primary">
+                  {normativeTypeLabelMap[formValues.normative_type] || formValues.normative_type || "—"}
+                </span>{" "}
+                &mdash; {formValues.complexity_level}-toifa &mdash; {categoryLabelMap[formValues.document_category]}{" "}
+                = <span className="font-black text-primary">{vhmValue > 0 ? vhmValue : "—"}</span> VHM/sahifa
+              </p>
             </div>
           </div>
         </div>
@@ -2216,9 +2272,9 @@ export default function HujjatlarPage() {
                             </td>
                           </tr>
                           <tr>
-                            <td className="border border-slate-300 p-3">Koeffitsient (K)</td>
+                            <td className="border border-slate-300 p-3">Koeffitsient (K = 2.1 × 1.12 × 1.4)</td>
                             <td className="border border-slate-300 p-3 text-right tabular-nums">
-                              {FORMULA_MULTIPLIER}
+                              3.2928
                             </td>
                           </tr>
                           <tr>

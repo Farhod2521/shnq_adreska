@@ -2,7 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models
 
-MROT = Decimal("1271000")
+MROT = Decimal("412000")
 
 
 class NormativeCoefficient(models.Model):
@@ -225,7 +225,7 @@ class DocumentCalculation(models.Model):
 
     def recalculate_final_total_amount(self) -> Decimal:
         """
-        Yangi formula: VHM × sahifalar_soni × MROT × 2.3
+        Formula: VHM × sahifalar_soni × 412000 × 2.1 × 1.12 × 1.4
         VHM (selected_base_coefficient) — 12-jadvaldan olingan qiymat, frontend yuboradi.
         """
         if self.selected_base_coefficient <= 0 or self.total_pages <= 0:
@@ -236,7 +236,9 @@ class DocumentCalculation(models.Model):
             self.selected_base_coefficient
             * Decimal(self.total_pages)
             * MROT
-            * Decimal("2.30")
+            * Decimal("2.1")
+            * Decimal("1.12")
+            * Decimal("1.4")
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         self.final_total_amount = result
         return result
