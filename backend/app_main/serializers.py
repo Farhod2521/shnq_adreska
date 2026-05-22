@@ -5,7 +5,6 @@ from .models import (
     DocumentCalculationCategory,
     NormativeCoefficient,
     OrganizationSettings,
-    StaffComposition,
 )
 
 
@@ -34,12 +33,6 @@ class NormativeCoefficientSerializer(serializers.ModelSerializer):
         ]
 
 
-class StaffCompositionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = StaffComposition
-        fields = ["id", "name", "coefficient", "mrot", "sort_order"]
-
-
 class DocumentCalculationCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentCalculationCategory
@@ -53,6 +46,7 @@ class DocumentCalculationSerializer(serializers.ModelSerializer):
         model = DocumentCalculation
         fields = [
             "id",
+            "designation",
             "name",
             "total_pages",
             "normative_type",
@@ -63,8 +57,6 @@ class DocumentCalculationSerializer(serializers.ModelSerializer):
             "is_research_required",
             "selected_base_coefficient",
             "selected_complexity_coefficient",
-            "staff_snapshot",
-            "staff_total_amount",
             "final_total_amount",
             "completed_amount",
             "planned_amount",
@@ -91,6 +83,7 @@ class DocumentCalculationSerializer(serializers.ModelSerializer):
 
 
 class DocumentCalculationCreateSerializer(serializers.Serializer):
+    designation = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     name = serializers.CharField(max_length=500)
     total_pages = serializers.IntegerField(min_value=1)
     normative_type = serializers.ChoiceField(choices=NormativeCoefficient.NormativeType.choices)
@@ -100,6 +93,10 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
     )
     complexity_level = serializers.ChoiceField(choices=DocumentCalculation.ComplexityLevel.choices)
     is_research_required = serializers.BooleanField(required=False, default=False)
+    # VHM qiymati — 12-jadvaldan frontend hisoblaydi va yuboradi
+    selected_base_coefficient = serializers.DecimalField(
+        max_digits=10, decimal_places=2, required=False, default="0.00"
+    )
     completed_amount = serializers.DecimalField(
         max_digits=18, decimal_places=2, required=False, default="0.00"
     )
@@ -123,7 +120,6 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
     executor_organization = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
     contract_number = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
     notes = serializers.CharField(required=False, allow_blank=True, default="")
-    staff_counts = serializers.DictField(child=serializers.IntegerField(min_value=0), required=False)
 
     def validate(self, attrs):
         normative_type = attrs.get("normative_type")
@@ -143,33 +139,14 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        staff_counts = validated_data.pop("staff_counts", {})
-
         instance = DocumentCalculation.objects.create(**validated_data)
-        instance.apply_normative_coefficients()
-        instance.build_staff_snapshot(staff_counts=staff_counts)
         instance.recalculate_final_total_amount()
-        instance.save(
-            update_fields=[
-                "selected_base_coefficient",
-                "selected_complexity_coefficient",
-                "staff_snapshot",
-                "staff_total_amount",
-                "final_total_amount",
-                "updated_at",
-            ]
-        )
+        instance.save(update_fields=["final_total_amount", "updated_at"])
         return instance
 
     def update(self, instance, validated_data):
-        staff_counts = validated_data.pop("staff_counts", None)
-
         for field, value in validated_data.items():
             setattr(instance, field, value)
-
-        instance.apply_normative_coefficients()
-        if staff_counts is not None:
-            instance.build_staff_snapshot(staff_counts=staff_counts)
         instance.recalculate_final_total_amount()
         instance.save()
         return instance

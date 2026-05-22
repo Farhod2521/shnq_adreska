@@ -4,15 +4,7 @@ from .models import (
     DocumentCalculation,
     DocumentCalculationCategory,
     NormativeCoefficient,
-    StaffComposition,
 )
-
-
-@admin.register(StaffComposition)
-class StaffCompositionAdmin(admin.ModelAdmin):
-    list_display = ("id", "name", "coefficient", "mrot", "sort_order", "is_active")
-    list_filter = ("is_active",)
-    search_fields = ("name",)
 
 
 @admin.register(NormativeCoefficient)
@@ -36,19 +28,19 @@ class NormativeCoefficientAdmin(admin.ModelAdmin):
 class DocumentCalculationAdmin(admin.ModelAdmin):
     list_display = (
         "id",
+        "designation",
         "name",
         "normative_type",
         "document_category",
         "calculation_category",
         "complexity_level",
         "selected_base_coefficient",
-        "selected_complexity_coefficient",
+        "total_pages",
         "is_research_required",
         "completed_amount",
         "planned_amount",
         "development_deadline",
         "executor_organization",
-        "staff_total_amount",
         "final_total_amount",
         "created_at",
     )
@@ -59,7 +51,7 @@ class DocumentCalculationAdmin(admin.ModelAdmin):
         "complexity_level",
         "is_research_required",
     )
-    search_fields = ("name",)
+    search_fields = ("name", "designation")
 
 
 @admin.register(DocumentCalculationCategory)

@@ -23,7 +23,6 @@ from .models import (
     DocumentCalculationCategory,
     NormativeCoefficient,
     OrganizationSettings,
-    StaffComposition,
 )
 from .serializers import (
     DocumentCalculationCreateSerializer,
@@ -32,7 +31,6 @@ from .serializers import (
     HealthCheckSerializer,
     NormativeCoefficientSerializer,
     OrganizationSettingsSerializer,
-    StaffCompositionSerializer,
 )
 
 
@@ -55,13 +53,6 @@ class NormativeCoefficientListAPIView(ListAPIView):
     permission_classes = []
     serializer_class = NormativeCoefficientSerializer
     queryset = NormativeCoefficient.objects.filter(is_active=True).order_by("normative_type")
-
-
-class StaffCompositionListAPIView(ListAPIView):
-    authentication_classes = []
-    permission_classes = []
-    serializer_class = StaffCompositionSerializer
-    queryset = StaffComposition.objects.filter(is_active=True).order_by("sort_order", "id")
 
 
 class DocumentCalculationCategoryListAPIView(ListAPIView):
@@ -202,11 +193,6 @@ class DocumentCalculationXlsxImportAPIView(APIView):
         document_category_values = {choice[0] for choice in DocumentCalculation.DocumentCategory.choices}
         complexity_values = {choice[0] for choice in DocumentCalculation.ComplexityLevel.choices}
 
-        # XLSX importida staff tarkibi berilmaydi, shuning uchun default sifatida 1 tadan olinadi.
-        default_staff_counts = {
-            str(staff.id): 1 for staff in StaffComposition.objects.filter(is_active=True).order_by("sort_order", "id")
-        }
-
         created_count = 0
         errors = []
 
@@ -291,7 +277,6 @@ class DocumentCalculationXlsxImportAPIView(APIView):
                     completed_amount=completed_amount,
                 )
                 instance.apply_normative_coefficients()
-                instance.build_staff_snapshot(default_staff_counts)
 
                 if final_total_from_xlsx is not None:
                     instance.final_total_amount = final_total_from_xlsx

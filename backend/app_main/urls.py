@@ -13,7 +13,6 @@ from .views import (
     HealthCheckAPIView,
     NormativeCoefficientListAPIView,
     OrganizationSettingsAPIView,
-    StaffCompositionListAPIView,
 )
 
 
@@ -23,7 +22,6 @@ urlpatterns = [
     path("health/", HealthCheckAPIView.as_view(), name="health"),
     path("dashboard-stats/", DashboardStatsAPIView.as_view(), name="dashboard-stats"),
     path("normative-coefficients/", NormativeCoefficientListAPIView.as_view(), name="normative-coefficients"),
-    path("staff-compositions/", StaffCompositionListAPIView.as_view(), name="staff-compositions"),
     path(
         "document-calculation-categories/",
         DocumentCalculationCategoryListAPIView.as_view(),

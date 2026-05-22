@@ -4,15 +4,6 @@ import AppSidebar from "@/components/AppSidebar";
 import AppLoadingState from "@/components/AppLoadingState";
 import { useEffect, useRef, useState } from "react";
 
-type StaffSnapshotItem = {
-  staff_id: number;
-  name: string;
-  employee_count: number;
-  coefficient: string;
-  mrot: string;
-  amount: string;
-};
-
 type NormativeCoefficientItem = {
   id: number;
   normative_type: string;
@@ -24,14 +15,6 @@ type NormativeCoefficientItem = {
   complexity_level_1: string;
   complexity_level_2: string;
   complexity_level_3: string;
-};
-
-type StaffCompositionItem = {
-  id: number;
-  name: string;
-  coefficient: string;
-  mrot: string;
-  sort_order: number;
 };
 
 type DocumentCalculationCategoryItem = {
@@ -48,11 +31,12 @@ type DocumentCategory =
 type ComplexityLevel = "1" | "2" | "3";
 type DocumentFormValues = {
   calculation_category: number | "";
+  designation: string;
   name: string;
   normative_type: string;
-  total_pages: number;
   complexity_level: ComplexityLevel;
   document_category: DocumentCategory;
+  total_pages: number;
   is_research_required: boolean;
   current_year_percent: number;
   development_deadline: string;
@@ -75,10 +59,69 @@ type DocumentFormValues = {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 const FORMULA_MULTIPLIER = 2.3;
+const MROT_VALUE = 1_271_000;
 const HIGH_AMOUNT_THRESHOLD = 2_472_000_000;
+
+// 12-jadval: VHM/sahifa qiymatlari (normativ_turi → murakkablik → hujjat_toifasi)
+type Table12Key = "new" | "rework_harmonization" | "rework_modification" | "additional_change";
+type Table12Level = "1" | "2" | "3";
+type Table12Row = Record<Table12Key, number>;
+type Table12Entry = Record<Table12Level, Table12Row>;
+
+const TABLE_12: Record<string, Table12Entry> = {
+  technical_regulation: {
+    "1": { new: 15, rework_harmonization: 8,  rework_modification: 8,  additional_change: 3 },
+    "2": { new: 28, rework_harmonization: 14, rework_modification: 14, additional_change: 5 },
+    "3": { new: 43, rework_harmonization: 22, rework_modification: 22, additional_change: 7 },
+  },
+  shnq: {
+    "1": { new: 14, rework_harmonization: 7,  rework_modification: 7,  additional_change: 2 },
+    "2": { new: 26, rework_harmonization: 13, rework_modification: 13, additional_change: 4 },
+    "3": { new: 40, rework_harmonization: 20, rework_modification: 20, additional_change: 7 },
+  },
+  srn: {
+    "1": { new: 14, rework_harmonization: 7,  rework_modification: 7,  additional_change: 2 },
+    "2": { new: 26, rework_harmonization: 13, rework_modification: 13, additional_change: 4 },
+    "3": { new: 40, rework_harmonization: 20, rework_modification: 20, additional_change: 7 },
+  },
+  eurocode: {
+    "1": { new: 13, rework_harmonization: 7,  rework_modification: 7,  additional_change: 2 },
+    "2": { new: 24, rework_harmonization: 12, rework_modification: 12, additional_change: 4 },
+    "3": { new: 37, rework_harmonization: 19, rework_modification: 19, additional_change: 6 },
+  },
+  qr: {
+    "1": { new: 12, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
+    "2": { new: 23, rework_harmonization: 12, rework_modification: 12, additional_change: 4 },
+    "3": { new: 34, rework_harmonization: 17, rework_modification: 17, additional_change: 6 },
+  },
+  mqn: {
+    "1": { new: 12, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
+    "2": { new: 23, rework_harmonization: 12, rework_modification: 12, additional_change: 4 },
+    "3": { new: 34, rework_harmonization: 17, rework_modification: 17, additional_change: 6 },
+  },
+  standard: {
+    "1": { new: 11, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
+    "2": { new: 21, rework_harmonization: 11, rework_modification: 11, additional_change: 4 },
+    "3": { new: 32, rework_harmonization: 16, rework_modification: 16, additional_change: 5 },
+  },
+  methodical_guide: {
+    "1": { new: 10, rework_harmonization: 5,  rework_modification: 5,  additional_change: 2 },
+    "2": { new: 19, rework_harmonization: 10, rework_modification: 10, additional_change: 3 },
+    "3": { new: 29, rework_harmonization: 15, rework_modification: 15, additional_change: 5 },
+  },
+};
+
+const getVhmValue = (
+  normativeType: string,
+  complexityLevel: Table12Level,
+  documentCategory: Table12Key,
+): number => {
+  return TABLE_12[normativeType]?.[complexityLevel]?.[documentCategory] ?? 0;
+};
 
 type DocumentCalculationItem = {
   id: number;
+  designation: string;
   name: string;
   total_pages: number;
   normative_type: string;
@@ -94,8 +137,6 @@ type DocumentCalculationItem = {
   notes?: string;
   selected_base_coefficient: string;
   selected_complexity_coefficient: string;
-  staff_snapshot: StaffSnapshotItem[];
-  staff_total_amount: string;
   final_total_amount: string;
   completed_amount: string;
   planned_amount: string;
@@ -251,17 +292,6 @@ const formatMoney = (value: number): string =>
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
 
-const staffIconByName = (name: string): string => {
-  const lower = name.toLowerCase();
-  if (lower.includes("rahbar")) return "person_celebrate";
-  if (lower.includes("yetakchi")) return "person_apron";
-  if (lower.includes("katta")) return "person_pin";
-  if (lower.includes("kichik")) return "engineering";
-  if (lower.includes("ekspert")) return "construction";
-  if (lower.includes("texnik") || lower.includes("stajer")) return "science";
-  return "person";
-};
-
 const categoryLabelMap: Record<DocumentCategory, string> = {
   new: "Yangi",
   rework_harmonization: "Qayta ishlash: uyg'unlashtirish",
@@ -277,11 +307,12 @@ const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: 
 
 const getInitialFormValues = (): DocumentFormValues => ({
   calculation_category: "",
+  designation: "",
   name: "",
   normative_type: "",
-  total_pages: 1,
   complexity_level: "1",
   document_category: "new",
+  total_pages: 1,
   is_research_required: false,
   current_year_percent: 0,
   development_deadline: "",
@@ -315,7 +346,6 @@ export default function HujjatlarPage() {
   const [isDocumentsLoading, setIsDocumentsLoading] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<DocumentCalculationItem | null>(null);
   const [normativeOptions, setNormativeOptions] = useState<NormativeCoefficientItem[]>([]);
-  const [staffOptions, setStaffOptions] = useState<StaffCompositionItem[]>([]);
   const [calculationCategories, setCalculationCategories] = useState<DocumentCalculationCategoryItem[]>([]);
   const [isFormDataLoading, setIsFormDataLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -323,7 +353,6 @@ export default function HujjatlarPage() {
   const [toastMessage, setToastMessage] = useState("");
   const [showToast, setShowToast] = useState(false);
   const [formValues, setFormValues] = useState<DocumentFormValues>(getInitialFormValues());
-  const [staffCounts, setStaffCounts] = useState<Record<number, number>>({});
   const [sortKey, setSortKey] = useState<"name" | "total_pages" | "final_total_amount" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const printRef = useRef<HTMLDivElement>(null);
@@ -404,7 +433,6 @@ export default function HujjatlarPage() {
       ...getInitialFormValues(),
       calculation_category: calculationCategories[0]?.id ?? "",
     });
-    setStaffCounts({});
     setIsCreateModalOpen(true);
   };
 
@@ -413,11 +441,12 @@ export default function HujjatlarPage() {
     setFormError("");
     setFormValues({
       calculation_category: document.calculation_category ?? calculationCategories[0]?.id ?? "",
+      designation: document.designation ?? "",
       name: document.name ?? "",
       normative_type: document.normative_type ?? "",
-      total_pages: Number(document.total_pages) || 1,
       complexity_level: document.complexity_level ?? "1",
       document_category: document.document_category ?? "new",
+      total_pages: Number(document.total_pages) || 1,
       is_research_required: Boolean(document.is_research_required),
       current_year_percent: toNumber(document.current_year_percent),
       development_deadline: document.development_deadline ?? "",
@@ -437,11 +466,6 @@ export default function HujjatlarPage() {
       stage4_end: document.stage4_end ?? "",
       stage4_amount: toNumber(document.stage4_amount),
     });
-    const snapshotCounts = (document.staff_snapshot ?? []).reduce<Record<number, number>>((acc, item) => {
-      acc[item.staff_id] = Number(item.employee_count) || 0;
-      return acc;
-    }, {});
-    setStaffCounts(snapshotCounts);
     setIsKalendarSectionOpen(true);
     setIsCreateModalOpen(true);
   };
@@ -670,40 +694,15 @@ export default function HujjatlarPage() {
     return () => window.clearTimeout(timer);
   }, [showToast]);
 
-  const selectedNormative = normativeOptions.find(
-    (item) => item.normative_type === formValues.normative_type
+  // 12-jadvaldan VHM qiymati
+  const vhmValue = getVhmValue(
+    formValues.normative_type,
+    formValues.complexity_level,
+    formValues.document_category as Table12Key,
   );
 
-  const selectedBaseCoefficient = selectedNormative
-    ? toNumber(
-        formValues.document_category === "new"
-          ? selectedNormative.new_document_base
-          : formValues.document_category === "rework_harmonization"
-            ? selectedNormative.rework_harmonization_base
-            : formValues.document_category === "rework_modification"
-              ? selectedNormative.rework_modification_base
-              : selectedNormative.additional_change_base
-      )
-    : 0;
-
-  const selectedComplexityCoefficient = selectedNormative
-    ? toNumber(
-        formValues.complexity_level === "1"
-          ? selectedNormative.complexity_level_1
-          : formValues.complexity_level === "2"
-            ? selectedNormative.complexity_level_2
-            : selectedNormative.complexity_level_3
-      )
-    : 0;
-
-  const staffTotalAmount = staffOptions.reduce((sum, staff) => {
-    const count = staffCounts[staff.id] ?? 0;
-    return sum + count * toNumber(staff.coefficient) * toNumber(staff.mrot);
-  }, 0);
-
-  const pageRatio =
-    selectedBaseCoefficient > 0 ? toNumber(formValues.total_pages) / selectedBaseCoefficient : 0;
-  const finalTotalAmount = staffTotalAmount * pageRatio * selectedComplexityCoefficient * FORMULA_MULTIPLIER;
+  // Yangi formula: VHM × sahifalar_soni × MROT × 2.3
+  const finalTotalAmount = vhmValue * toNumber(formValues.total_pages) * MROT_VALUE * FORMULA_MULTIPLIER;
   const researchCoefficient = formValues.is_research_required ? 1.4 : 1.0;
 
   // Kalendar reja — avtomatik hisoblangan bosqich summalar
@@ -740,22 +739,19 @@ export default function HujjatlarPage() {
       setIsFormDataLoading(true);
       setFormError("");
       try {
-        const [normativeResponse, staffResponse, categoriesResponse] = await Promise.all([
+        const [normativeResponse, categoriesResponse] = await Promise.all([
           fetch(`${API_BASE_URL}/normative-coefficients/`),
-          fetch(`${API_BASE_URL}/staff-compositions/`),
           fetch(`${API_BASE_URL}/document-calculation-categories/`),
         ]);
 
-        if (!normativeResponse.ok || !staffResponse.ok || !categoriesResponse.ok) {
+        if (!normativeResponse.ok || !categoriesResponse.ok) {
           throw new Error("Ma'lumotlarni yuklashda xatolik yuz berdi.");
         }
 
         const normativeData = (await normativeResponse.json()) as NormativeCoefficientItem[];
-        const staffData = (await staffResponse.json()) as StaffCompositionItem[];
         const categoryData = (await categoriesResponse.json()) as DocumentCalculationCategoryItem[];
 
         setNormativeOptions(normativeData);
-        setStaffOptions(staffData);
         setCalculationCategories(categoryData);
         setFormValues((prev) => ({
           ...prev,
@@ -765,13 +761,6 @@ export default function HujjatlarPage() {
               ? (categoryData[0]?.id ?? "")
               : (prev.calculation_category || categoryData[0]?.id || ""),
         }));
-        setStaffCounts((prev) => {
-          const next: Record<number, number> = {};
-          staffData.forEach((staff) => {
-            next[staff.id] = prev[staff.id] ?? 1;
-          });
-          return next;
-        });
       } catch (error) {
         setFormError(error instanceof Error ? error.message : "Noma'lum xatolik yuz berdi.");
       } finally {
@@ -808,22 +797,21 @@ export default function HujjatlarPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          designation: formValues.designation.trim(),
           name: formValues.name.trim(),
-          total_pages: Number(formValues.total_pages) || 0,
           normative_type: formValues.normative_type,
+          complexity_level: formValues.complexity_level,
+          document_category: formValues.document_category,
+          total_pages: Number(formValues.total_pages) || 0,
+          selected_base_coefficient: vhmValue,
           calculation_category:
             formValues.calculation_category === "" ? null : Number(formValues.calculation_category),
-          document_category: formValues.document_category,
-          complexity_level: formValues.complexity_level,
           is_research_required: formValues.is_research_required,
           current_year_percent: Number(formValues.current_year_percent.toFixed(2)),
           development_deadline: formValues.development_deadline.trim(),
           executor_organization: formValues.executor_organization.trim(),
           contract_number: formValues.contract_number.trim(),
           notes: formValues.notes.trim(),
-          staff_counts: Object.fromEntries(
-            Object.entries(staffCounts).map(([key, value]) => [key, Number(value) || 0])
-          ),
           stage1_start: formValues.stage1_start.trim(),
           stage1_end: formValues.stage1_end.trim(),
           stage1_amount: Number(formValues.stage1_amount.toFixed(2)),
@@ -1233,6 +1221,9 @@ export default function HujjatlarPage() {
                             </span>
                           </td>
                           <td className="px-5 py-3.5">
+                            {doc.designation && (
+                              <p className="mb-0.5 text-[11px] font-bold text-slate-400">{doc.designation}</p>
+                            )}
                             <p className="max-w-[42ch] truncate text-sm font-semibold leading-tight text-slate-900">
                               {doc.name}
                             </p>
@@ -1578,7 +1569,7 @@ export default function HujjatlarPage() {
                   <AppLoadingState
                     className="rounded-lg border border-slate-200 bg-white"
                     compact
-                    subtitle="Normativlar va xodimlar ma'lumotlari olinmoqda."
+                    subtitle="Normativlar va kategoriyalar ma'lumotlari olinmoqda."
                     title="Ma&apos;lumotlar yuklanmoqda"
                   />
                 )}
@@ -1595,6 +1586,7 @@ export default function HujjatlarPage() {
                     <h3 className="text-lg font-bold text-slate-800">Asosiy ma&apos;lumotlar</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-6 p-6 md:grid-cols-3">
+                    {/* Kategoriya */}
                     <div className="md:col-span-3">
                       <label className="mb-2 block text-sm font-semibold text-slate-700">Kategoriya</label>
                       <select
@@ -1615,16 +1607,32 @@ export default function HujjatlarPage() {
                         ))}
                       </select>
                     </div>
+                    {/* Belgilanishi (col-3) + Hujjat nomi (col-9) */}
                     <div className="md:col-span-3">
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat nomi</label>
-                      <input
-                        className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        placeholder="Masalan: Qurilish me'yorlari va qoidalari..."
-                        onChange={(event) => setFormValues((prev) => ({ ...prev, name: event.target.value }))}
-                        type="text"
-                        value={formValues.name}
-                      />
+                      <div className="grid grid-cols-12 gap-4">
+                        <div className="col-span-12 md:col-span-3">
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">Belgilanishi</label>
+                          <input
+                            className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            placeholder="Masalan: ShNQ 4.13.61-06"
+                            onChange={(event) => setFormValues((prev) => ({ ...prev, designation: event.target.value }))}
+                            type="text"
+                            value={formValues.designation}
+                          />
+                        </div>
+                        <div className="col-span-12 md:col-span-9">
+                          <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat nomi</label>
+                          <input
+                            className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            placeholder="Masalan: Birinchi, ikkinchi, yuqori «A» va «B» toifadagi mehmonxonalar..."
+                            onChange={(event) => setFormValues((prev) => ({ ...prev, name: event.target.value }))}
+                            type="text"
+                            value={formValues.name}
+                          />
+                        </div>
+                      </div>
                     </div>
+                    {/* 1) Hujjat turi */}
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat turi</label>
                       <select
@@ -1642,22 +1650,7 @@ export default function HujjatlarPage() {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">Umumiy sahifalar soni</label>
-                      <div className="relative">
-                        <input
-                          className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                          min={1}
-                          onChange={(event) =>
-                            setFormValues((prev) => ({ ...prev, total_pages: Number(event.target.value) || 0 }))
-                          }
-                          placeholder="0"
-                          type="number"
-                          value={formValues.total_pages}
-                        />
-                        <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-slate-400">bet</span>
-                      </div>
-                    </div>
+                    {/* 2) Murakkablik toifasi */}
                     <div>
                       <label className="mb-2 block text-sm font-semibold text-slate-700">Murakkablik toifasi</label>
                       <select
@@ -1675,90 +1668,74 @@ export default function HujjatlarPage() {
                         <option value="3">III toifa</option>
                       </select>
                     </div>
+                    {/* VHM ko'rsatgich */}
+                    <div className="flex items-end">
+                      <div className="w-full rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wide">12-jadval VHM qiymati</p>
+                        <p className="mt-1 text-2xl font-black text-primary">
+                          {vhmValue > 0 ? vhmValue : "—"}
+                        </p>
+                        <p className="text-xs text-slate-500">VHM/sahifa</p>
+                      </div>
+                    </div>
+                    {/* 3) Hujjat toifasi */}
                     <div className="md:col-span-3">
                       <label className="mb-2 block text-sm font-semibold text-slate-700">Hujjat toifasi</label>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
-                          <input
-                            className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
-                            checked={formValues.document_category === "new"}
-                            name="hujjat_toifasi"
-                            onChange={() =>
-                              setFormValues((prev) => ({ ...prev, document_category: "new" }))
-                            }
-                            type="radio"
-                            value="new"
-                          />
-                          Yangi
-                          {selectedNormative && (
-                            <span className="ml-1 text-xs text-primary">
-                              ({selectedNormative.new_document_base} bet/oy)
-                            </span>
-                          )}
-                        </label>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
-                          <input
-                            className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
-                            checked={formValues.document_category === "rework_harmonization"}
-                            name="hujjat_toifasi"
-                            onChange={() =>
-                              setFormValues((prev) => ({
-                                ...prev,
-                                document_category: "rework_harmonization",
-                              }))
-                            }
-                            type="radio"
-                            value="rework_harmonization"
-                          />
-                          Qayta ishlash: uyg&apos;unlashtirish
-                          {selectedNormative && (
-                            <span className="ml-1 text-xs text-primary">
-                              ({selectedNormative.rework_harmonization_base} bet)
-                            </span>
-                          )}
-                        </label>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
-                          <input
-                            className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
-                            checked={formValues.document_category === "rework_modification"}
-                            name="hujjat_toifasi"
-                            onChange={() =>
-                              setFormValues((prev) => ({
-                                ...prev,
-                                document_category: "rework_modification",
-                              }))
-                            }
-                            type="radio"
-                            value="rework_modification"
-                          />
-                          Qayta ishlash: muvofiqlashtirish
-                          {selectedNormative && (
-                            <span className="ml-1 text-xs text-primary">
-                              ({selectedNormative.rework_modification_base} bet)
-                            </span>
-                          )}
-                        </label>
-                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm text-slate-700">
-                          <input
-                            className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
-                            checked={formValues.document_category === "additional_change"}
-                            name="hujjat_toifasi"
-                            onChange={() =>
-                              setFormValues((prev) => ({
-                                ...prev,
-                                document_category: "additional_change",
-                              }))
-                            }
-                            type="radio"
-                            value="additional_change"
-                          />
-                          Qo&apos;shimcha o&apos;zgartirish
-                          {selectedNormative && (
-                            <span className="ml-1 text-xs text-primary">
-                              ({selectedNormative.additional_change_base} bet)
-                            </span>
-                          )}
-                        </label>
+                        {(
+                          [
+                            { value: "new", label: "Yangi" },
+                            { value: "rework_harmonization", label: "Qayta ishlash: uygʿunlashtirish" },
+                            { value: "rework_modification", label: "Qayta ishlash: muvofiqlashtirish" },
+                            { value: "additional_change", label: "Qoʻshimcha oʻzgartirish" },
+                          ] as { value: DocumentCategory; label: string }[]
+                        ).map((opt) => {
+                          const vhm = getVhmValue(formValues.normative_type, formValues.complexity_level, opt.value as Table12Key);
+                          return (
+                            <label
+                              key={opt.value}
+                              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm transition-colors ${
+                                formValues.document_category === opt.value
+                                  ? "border-primary bg-primary/5 text-primary font-semibold"
+                                  : "border-slate-300 bg-white text-slate-700 hover:border-primary/40"
+                              }`}
+                            >
+                              <input
+                                className="h-4 w-4 border-slate-300 text-primary focus:ring-primary/30"
+                                checked={formValues.document_category === opt.value}
+                                name="hujjat_toifasi"
+                                onChange={() =>
+                                  setFormValues((prev) => ({ ...prev, document_category: opt.value }))
+                                }
+                                type="radio"
+                                value={opt.value}
+                              />
+                              <span className="flex-1">{opt.label}</span>
+                              {vhm > 0 && (
+                                <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-xs font-bold text-primary">
+                                  {vhm}
+                                </span>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    {/* 4) Sahifalar soni — oxirida */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">Umumiy sahifalar soni</label>
+                      <div className="relative">
+                        <input
+                          className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          min={1}
+                          onChange={(event) =>
+                            setFormValues((prev) => ({ ...prev, total_pages: Number(event.target.value) || 0 }))
+                          }
+                          placeholder="0"
+                          type="number"
+                          value={formValues.total_pages}
+                        />
+                        <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-slate-400">bet</span>
                       </div>
                     </div>
                     <div className="md:col-span-3">
@@ -1879,72 +1856,29 @@ export default function HujjatlarPage() {
                   </div>
                 </section>
 
-                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                  <div className="flex items-center gap-3 border-b border-slate-100 bg-slate-50/70 px-6 py-4">
-                    <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
-                      2
-                    </span>
-                    <h3 className="text-lg font-bold text-slate-800">Xodimlar tarkibi</h3>
-                  </div>
-                  <div className="p-6">
-                    <p className="mb-6 text-sm text-slate-500">
-                      Loyiha ustida ishlovchi mutaxassislar sonini ko&apos;rsating:
-                    </p>
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                      {staffOptions.map((staff) => (
-                        <div key={staff.id} className="space-y-2">
-                          <label className="block text-xs font-bold tracking-wide text-slate-500 uppercase">
-                            {staff.name}
-                          </label>
-                          <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-slate-400">
-                              {staffIconByName(staff.name)}
-                            </span>
-                            <input
-                              className="h-11 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
-                              min={0}
-                              onChange={(event) =>
-                                setStaffCounts((prev) => ({
-                                  ...prev,
-                                  [staff.id]: Number(event.target.value) || 0,
-                                }))
-                              }
-                              type="number"
-                              value={staffCounts[staff.id] ?? 1}
-                            />
-                          </div>
-                          <p className="text-[11px] text-slate-500">
-                            k={staff.coefficient} | mrot={formatMoney(toNumber(staff.mrot))}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </section>
-
                 <section className="rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 p-6">
                   <div className="mb-6 flex items-center gap-3">
                     <span className="material-symbols-outlined text-primary">calculate</span>
-                    <h3 className="text-lg font-bold text-primary">3. Avtomatik hisob-kitoblar</h3>
+                    <h3 className="text-lg font-bold text-primary">2. Avtomatik hisob-kitoblar</h3>
                   </div>
                   <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                     <div className="flex flex-col items-center rounded-lg border border-primary/10 bg-white p-5 text-center shadow-sm">
                       <span className="mb-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                        Ish haqi jami
+                        VHM × Sahifalar
                       </span>
-                      <div className="text-2xl font-black text-primary">{formatMoney(staffTotalAmount)}</div>
-                      <span className="text-xs text-slate-500">so&apos;m</span>
+                      <div className="text-2xl font-black text-primary">
+                        {vhmValue} × {formValues.total_pages}
+                      </div>
+                      <span className="text-xs text-slate-500">12-jadval qiymati × sahifa</span>
                     </div>
                     <div className="flex flex-col items-center rounded-lg border border-primary/10 bg-white p-5 text-center shadow-sm">
                       <span className="mb-1 text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                        Sahifa/Bet x Murakkablik
+                        MROT × K
                       </span>
                       <div className="text-2xl font-black text-primary">
-                        {pageRatio.toFixed(2)} x {selectedComplexityCoefficient.toFixed(2)}
+                        {formatMoney(MROT_VALUE)} × {FORMULA_MULTIPLIER}
                       </div>
-                      <span className="text-xs text-slate-500">
-                        bet={selectedBaseCoefficient.toFixed(2)} | K={FORMULA_MULTIPLIER}
-                      </span>
+                      <span className="text-xs text-slate-500">so&apos;m</span>
                     </div>
                     <div className="flex flex-col items-center rounded-lg bg-primary p-5 text-center text-white shadow-md">
                       <span className="mb-1 text-[10px] font-bold tracking-widest uppercase opacity-80">
@@ -1955,7 +1889,7 @@ export default function HujjatlarPage() {
                     </div>
                   </div>
                   <p className="mt-4 text-xs text-slate-500">
-                    Formula: ish_haqi_jami * (sahifa_soni / bet_soni) * murakkablik_darajasi * 2.3
+                    Formula: VHM × sahifa_soni × MROT × {FORMULA_MULTIPLIER}
                   </p>
 
                   {/* Kalendar reja */}
@@ -2213,6 +2147,9 @@ export default function HujjatlarPage() {
                 
                   </div>
                   <div className="mb-8 text-center">
+                    {selectedDocument?.designation && (
+                      <p className="mb-1 text-sm font-bold text-primary">{selectedDocument.designation}</p>
+                    )}
                     <h4 className="mx-auto max-w-4xl text-[18px] leading-[1.35] font-bold tracking-tight text-slate-900">
                       {selectedDocument?.name || "Hisob-kitob hujjati"}
                     </h4>
@@ -2220,49 +2157,25 @@ export default function HujjatlarPage() {
 
                   <div className="mb-8 rounded-xl border border-slate-200 p-4">
                     <h3 className="mb-4 text-sm font-bold tracking-wider text-primary uppercase">
-                      Ish haqi
+                      Hisob-kitob parametrlari
                     </h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full border-collapse border border-slate-300">
-                        <thead>
-                          <tr className="bg-slate-50">
-                            <th className="border border-slate-300 p-2 text-center text-xs font-bold">T/r</th>
-                            <th className="border border-slate-300 p-2 text-center text-xs font-bold">Xodimlar tarkibi</th>
-                            <th className="border border-slate-300 p-2 text-center text-xs font-bold">Soni</th>
-                            <th className="border border-slate-300 p-2 text-center text-xs font-bold">
-                              Koeffitsient
-                            </th>
-                            <th className="border border-slate-300 p-2 text-center text-xs font-bold">MROT</th>
-                            <th className="border border-slate-300 p-2 text-center text-xs font-bold">
-                              Xodimlarning maoshi
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="text-[13px]">
-                          {(selectedDocument?.staff_snapshot || []).map((item, index) => (
-                            <tr key={`${item.staff_id}-${index}`}>
-                              <td className="border border-slate-300 p-2 text-center">{index + 1}</td>
-                              <td className="border border-slate-300 p-2">{item.name}</td>
-                              <td className="border border-slate-300 p-2 text-center">{item.employee_count}</td>
-                              <td className="border border-slate-300 p-2 text-right">
-                                {formatMoney(toNumber(item.coefficient))}
-                              </td>
-                              <td className="border border-slate-300 p-2 text-right">
-                                {formatMoney(toNumber(item.mrot))}
-                              </td>
-                              <td className="border border-slate-300 p-2 text-right">
-                                {formatMoney(toNumber(item.amount))}
-                              </td>
-                            </tr>
-                          ))}
-                          <tr className="bg-slate-50 font-bold">
-                            <td className="border border-slate-300 p-2 text-center" colSpan={5}>Jami</td>
-                            <td className="border border-slate-300 p-2 text-right">
-                              {formatMoney(toNumber(selectedDocument?.staff_total_amount))}
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                      <div className="rounded-lg bg-slate-50 p-3 text-center">
+                        <p className="text-[10px] font-bold uppercase text-slate-400">Hujjat turi</p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">{selectedDocument?.normative_type?.toUpperCase() ?? "—"}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-3 text-center">
+                        <p className="text-[10px] font-bold uppercase text-slate-400">Murakkablik</p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">{selectedDocument ? `${selectedDocument.complexity_level}-toifa` : "—"}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-3 text-center">
+                        <p className="text-[10px] font-bold uppercase text-slate-400">VHM qiymati</p>
+                        <p className="mt-1 text-sm font-bold text-primary">{selectedDocument ? toNumber(selectedDocument.selected_base_coefficient).toFixed(0) : "—"}</p>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 p-3 text-center">
+                        <p className="text-[10px] font-bold uppercase text-slate-400">Sahifalar</p>
+                        <p className="mt-1 text-sm font-bold text-slate-800">{selectedDocument?.total_pages ?? "—"}</p>
+                      </div>
                     </div>
                   </div>
 
@@ -2285,31 +2198,27 @@ export default function HujjatlarPage() {
                         </thead>
                         <tbody className="text-[13px]">
                           <tr>
-                            <td className="border border-slate-300 p-3">Bazaviy narx normativi</td>
-
+                            <td className="border border-slate-300 p-3">VHM qiymati (12-jadval)</td>
                             <td className="border border-slate-300 p-3 text-right tabular-nums">
-                              {formatMoney(toNumber(selectedDocument?.selected_base_coefficient))}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="border border-slate-300 p-3">Murakkablik koeffitsienti</td>
-
-                            <td className="border border-slate-300 p-3 text-right tabular-nums">
-                              {formatMoney(toNumber(selectedDocument?.selected_complexity_coefficient))}
-                            </td>
-                          </tr>
-                          <tr>
-                            <td className="border border-slate-300 p-3">Xodimlar bo&apos;yicha jami</td>
-
-                            <td className="border border-slate-300 p-3 text-right tabular-nums">
-                              {formatMoney(toNumber(selectedDocument?.staff_total_amount))}
+                              {toNumber(selectedDocument?.selected_base_coefficient).toFixed(0)}
                             </td>
                           </tr>
                           <tr>
                             <td className="border border-slate-300 p-3">Sahifalar soni</td>
-
                             <td className="border border-slate-300 p-3 text-right tabular-nums">
-                              {selectedDocument?.total_pages ?? 0}
+                              {selectedDocument?.total_pages ?? 0} bet
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="border border-slate-300 p-3">MROT</td>
+                            <td className="border border-slate-300 p-3 text-right tabular-nums">
+                              {formatMoney(MROT_VALUE)}
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="border border-slate-300 p-3">Koeffitsient (K)</td>
+                            <td className="border border-slate-300 p-3 text-right tabular-nums">
+                              {FORMULA_MULTIPLIER}
                             </td>
                           </tr>
                           <tr>

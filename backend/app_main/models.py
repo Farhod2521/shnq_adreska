@@ -2,23 +2,7 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models
 
-
-class StaffComposition(models.Model):
-    name = models.CharField(max_length=255, verbose_name="Nomi")
-    coefficient = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Koeffitsient")
-    mrot = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="MROT")
-    sort_order = models.PositiveSmallIntegerField(default=1, verbose_name="Tartib raqami")
-    is_active = models.BooleanField(default=True, verbose_name="Faol")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqti")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Yangilangan vaqti")
-
-    class Meta:
-        ordering = ["sort_order", "id"]
-        verbose_name = "Xodim tarkibi"
-        verbose_name_plural = "Xodimlar tarkibi"
-
-    def __str__(self) -> str:
-        return self.name
+MROT = Decimal("1271000")
 
 
 class NormativeCoefficient(models.Model):
@@ -93,6 +77,7 @@ class DocumentCalculation(models.Model):
         LEVEL_2 = "2", "II toifa"
         LEVEL_3 = "3", "III toifa"
 
+    designation = models.CharField(max_length=100, blank=True, default="", verbose_name="Belgilanishi")
     name = models.CharField(max_length=500, verbose_name="Hujjat nomi")
     total_pages = models.PositiveIntegerField(default=0, verbose_name="Umumiy sahifalar soni")
     normative_type = models.CharField(
@@ -124,26 +109,19 @@ class DocumentCalculation(models.Model):
         max_digits=10,
         decimal_places=2,
         default=0,
-        verbose_name="Tanlangan bazaviy koeffitsient",
+        verbose_name="VHM qiymati (12-jadval)",
     )
     selected_complexity_coefficient = models.DecimalField(
         max_digits=6,
         decimal_places=2,
         default=1,
-        verbose_name="Tanlangan murakkablik koeffitsienti",
+        verbose_name="Murakkablik koeffitsienti (saqlangan)",
     )
     is_research_required = models.BooleanField(
         default=False,
         verbose_name="Tadqiqot o'tkazilishi belgilangan normativ hujjatmi?",
     )
 
-    staff_snapshot = models.JSONField(default=list, blank=True, verbose_name="Xodimlar snapshot (JSON)")
-    staff_total_amount = models.DecimalField(
-        max_digits=16,
-        decimal_places=2,
-        default=0,
-        verbose_name="Xodimlar bo'yicha jami summa",
-    )
     final_total_amount = models.DecimalField(
         max_digits=18,
         decimal_places=2,
@@ -162,7 +140,6 @@ class DocumentCalculation(models.Model):
         default=0,
         verbose_name="2026-yilga rejalashtirilgan",
     )
-    # Joriy va keyingi yil taqsimoti
     current_year_percent = models.DecimalField(
         max_digits=5,
         decimal_places=2,
@@ -220,6 +197,7 @@ class DocumentCalculation(models.Model):
         return self.name
 
     def apply_normative_coefficients(self) -> None:
+        """XLSX import uchun ishlatiladi — NormativeCoefficient jadvalidan qiymat oladi."""
         matrix = NormativeCoefficient.objects.filter(
             normative_type=self.normative_type,
             is_active=True,
@@ -245,41 +223,19 @@ class DocumentCalculation(models.Model):
             Decimal("1.00"),
         )
 
-    def build_staff_snapshot(self, staff_counts: dict[str, int]) -> list[dict]:
-        snapshot: list[dict] = []
-        total = Decimal("0.00")
-
-        for staff in StaffComposition.objects.filter(is_active=True).order_by("sort_order", "id"):
-            count = int(staff_counts.get(str(staff.id), staff_counts.get(staff.name, 0)) or 0)
-            amount = (Decimal(count) * staff.coefficient * staff.mrot).quantize(
-                Decimal("0.01"), rounding=ROUND_HALF_UP
-            )
-            total += amount
-            snapshot.append(
-                {
-                    "staff_id": staff.id,
-                    "name": staff.name,
-                    "employee_count": count,
-                    "coefficient": str(staff.coefficient),
-                    "mrot": str(staff.mrot),
-                    "amount": str(amount),
-                }
-            )
-
-        self.staff_snapshot = snapshot
-        self.staff_total_amount = total.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        return snapshot
-
     def recalculate_final_total_amount(self) -> Decimal:
+        """
+        Yangi formula: VHM × sahifalar_soni × MROT × 2.3
+        VHM (selected_base_coefficient) — 12-jadvaldan olingan qiymat, frontend yuboradi.
+        """
         if self.selected_base_coefficient <= 0 or self.total_pages <= 0:
             self.final_total_amount = Decimal("0.00")
             return self.final_total_amount
 
-        page_ratio = Decimal(self.total_pages) / self.selected_base_coefficient
         result = (
-            self.staff_total_amount
-            * page_ratio
-            * self.selected_complexity_coefficient
+            self.selected_base_coefficient
+            * Decimal(self.total_pages)
+            * MROT
             * Decimal("2.30")
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         self.final_total_amount = result
