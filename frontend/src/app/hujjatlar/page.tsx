@@ -1687,11 +1687,6 @@ export default function HujjatlarPage() {
                             <option value="rework_harmonization">Qayta</option>
                             <option value="additional_change">O&apos;zgartirish</option>
                           </select>
-                          {vhmValue > 0 && (
-                            <p className="mt-1 text-xs font-semibold text-primary">
-                              VHM: {vhmValue} VHM/sahifa
-                            </p>
-                          )}
                         </div>
                         {/* 12-jadval icon — col-2 */}
                         <div className="col-span-12 md:col-span-2">
@@ -1705,7 +1700,9 @@ export default function HujjatlarPage() {
                             type="button"
                           >
                             <span className="material-symbols-outlined text-[22px]">table_chart</span>
-                            <span className="text-xs font-bold">Jadval</span>
+                            <span className="text-xs font-bold">
+                              Jadval{vhmValue > 0 ? `-${vhmValue}` : ""}
+                            </span>
                           </button>
                         </div>
                       </div>
