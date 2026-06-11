@@ -740,6 +740,13 @@ class DocumentContractAPIView(APIView):
 
         org = OrganizationSettings.get_instance()
 
+        # Formuladan to'g'ri yakuniy summani hisoblash (DB'dagi eski qiymat emas)
+        # apply_normative_coefficients() → NormativeCoefficient jadvalidan VHM oladi
+        # recalculate_final_total_amount() → VHM × pages × MROT × 2.1 × 1.12 [× 1.4]
+        doc.apply_normative_coefficients()
+        doc.recalculate_final_total_amount()
+        # doc.final_total_amount endi to'g'ri hisoblangan qiymat (DB'ga saqlanmaydi)
+
         placeholders = {
             # Hujjat ma'lumotlari
             "shnq_name": doc.name,
@@ -817,6 +824,43 @@ class DocumentTexnikTopshiriqAPIView(DocumentContractAPIView):
         if response.status_code == 200:
             response.data["filename"] = f"texnik_topshiriq_{pk}.docx"
         return response
+
+
+class SyncFromSheetsAPIView(APIView):
+    """Google Sheets dan bazani qo'lda yangilash."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        from django.core.management import call_command
+        import io as _io
+
+        out = _io.StringIO()
+        try:
+            call_command("sync_from_sheets", stdout=out, stderr=out)
+        except Exception as exc:
+            return Response(
+                {"detail": f"Sync xatosi: {exc}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        output = out.getvalue()
+        # "Yaratildi: N ta" satridan natijani olish
+        created = 0
+        for line in output.splitlines():
+            if "Yaratildi:" in line:
+                parts = line.split("Yaratildi:")
+                if len(parts) > 1:
+                    try:
+                        created = int(parts[1].strip().split()[0])
+                    except (ValueError, IndexError):
+                        pass
+
+        return Response(
+            {"detail": "Muvaffaqiyatli yangilandi.", "created": created, "log": output},
+            status=status.HTTP_200_OK,
+        )
 
 
 class OrganizationSettingsAPIView(APIView):

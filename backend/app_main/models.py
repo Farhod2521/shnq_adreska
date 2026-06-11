@@ -15,6 +15,7 @@ class NormativeCoefficient(models.Model):
         QR_MQN = "qr", "QR"
         MQN = "mqn", "MQN"
         METHODICAL_GUIDE = "methodical_guide", "Methodical guide"
+        NIZOM = "nizom", "Nizom"
 
     normative_type = models.CharField(
         max_length=64,
@@ -23,20 +24,26 @@ class NormativeCoefficient(models.Model):
         verbose_name="Normativ turi",
     )
 
-    new_document_base = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Yangi (bet/oy)")
-    rework_harmonization_base = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="Qayta ishlash: uyg'unlashtirish (bet)"
-    )
+    # VHM qiymatlari — Metodika 12-jadvali (Меҳнат сарфи). Har bir toifa uchun alohida.
+    new_document_base   = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Yangi I toifa")
+    new_document_base_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Yangi II toifa")
+    new_document_base_3 = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Yangi III toifa")
+
+    rework_harmonization_base   = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Qayta ishlash I toifa")
+    rework_harmonization_base_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Qayta ishlash II toifa")
+    rework_harmonization_base_3 = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Qayta ishlash III toifa")
+
     rework_modification_base = models.DecimalField(
         max_digits=10, decimal_places=2, verbose_name="Qayta ishlash: muvofiqlashtirish (bet)"
     )
-    additional_change_base = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="Qo'shimcha o'zgartirish (bet)"
-    )
 
-    complexity_level_1 = models.DecimalField(max_digits=6, decimal_places=2, default=1.00, verbose_name="I toifa")
-    complexity_level_2 = models.DecimalField(max_digits=6, decimal_places=2, default=1.10, verbose_name="II toifa")
-    complexity_level_3 = models.DecimalField(max_digits=6, decimal_places=2, default=1.20, verbose_name="III toifa")
+    additional_change_base   = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="O'zgartirish I toifa")
+    additional_change_base_2 = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="O'zgartirish II toifa")
+    additional_change_base_3 = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="O'zgartirish III toifa")
+
+    complexity_level_1 = models.DecimalField(max_digits=6, decimal_places=2, default=1.00, verbose_name="I toifa koeff")
+    complexity_level_2 = models.DecimalField(max_digits=6, decimal_places=2, default=1.10, verbose_name="II toifa koeff")
+    complexity_level_3 = models.DecimalField(max_digits=6, decimal_places=2, default=1.20, verbose_name="III toifa koeff")
 
     is_active = models.BooleanField(default=True, verbose_name="Faol")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan vaqti")
@@ -197,7 +204,7 @@ class DocumentCalculation(models.Model):
         return self.name
 
     def apply_normative_coefficients(self) -> None:
-        """XLSX import uchun ishlatiladi — NormativeCoefficient jadvalidan qiymat oladi."""
+        """NormativeCoefficient jadvalidan VHM qiymatini (toifa va murakkablikka qarab) oladi."""
         matrix = NormativeCoefficient.objects.filter(
             normative_type=self.normative_type,
             is_active=True,
@@ -205,40 +212,40 @@ class DocumentCalculation(models.Model):
         if not matrix:
             return
 
-        category_to_base = {
-            self.DocumentCategory.NEW: matrix.new_document_base,
-            self.DocumentCategory.REWORK_HARMONIZATION: matrix.rework_harmonization_base,
-            self.DocumentCategory.REWORK_MODIFICATION: matrix.rework_modification_base,
-            self.DocumentCategory.ADDITIONAL_CHANGE: matrix.additional_change_base,
+        # (hujjat_toifasi, murakkablik_darajasi) → VHM qiymati (12-jadval)
+        lookup = {
+            (self.DocumentCategory.NEW, self.ComplexityLevel.LEVEL_1): matrix.new_document_base,
+            (self.DocumentCategory.NEW, self.ComplexityLevel.LEVEL_2): matrix.new_document_base_2,
+            (self.DocumentCategory.NEW, self.ComplexityLevel.LEVEL_3): matrix.new_document_base_3,
+            (self.DocumentCategory.REWORK_HARMONIZATION, self.ComplexityLevel.LEVEL_1): matrix.rework_harmonization_base,
+            (self.DocumentCategory.REWORK_HARMONIZATION, self.ComplexityLevel.LEVEL_2): matrix.rework_harmonization_base_2,
+            (self.DocumentCategory.REWORK_HARMONIZATION, self.ComplexityLevel.LEVEL_3): matrix.rework_harmonization_base_3,
+            (self.DocumentCategory.REWORK_MODIFICATION, self.ComplexityLevel.LEVEL_1): matrix.rework_harmonization_base,
+            (self.DocumentCategory.REWORK_MODIFICATION, self.ComplexityLevel.LEVEL_2): matrix.rework_harmonization_base_2,
+            (self.DocumentCategory.REWORK_MODIFICATION, self.ComplexityLevel.LEVEL_3): matrix.rework_harmonization_base_3,
+            (self.DocumentCategory.ADDITIONAL_CHANGE, self.ComplexityLevel.LEVEL_1): matrix.additional_change_base,
+            (self.DocumentCategory.ADDITIONAL_CHANGE, self.ComplexityLevel.LEVEL_2): matrix.additional_change_base_2,
+            (self.DocumentCategory.ADDITIONAL_CHANGE, self.ComplexityLevel.LEVEL_3): matrix.additional_change_base_3,
         }
-        level_to_complexity = {
-            self.ComplexityLevel.LEVEL_1: matrix.complexity_level_1,
-            self.ComplexityLevel.LEVEL_2: matrix.complexity_level_2,
-            self.ComplexityLevel.LEVEL_3: matrix.complexity_level_3,
-        }
-
-        self.selected_base_coefficient = category_to_base.get(self.document_category, Decimal("0.00"))
-        self.selected_complexity_coefficient = level_to_complexity.get(
-            self.complexity_level,
-            Decimal("1.00"),
+        self.selected_base_coefficient = lookup.get(
+            (self.document_category, self.complexity_level), Decimal("0.00")
         )
+        self.selected_complexity_coefficient = Decimal("1.00")
 
     def recalculate_final_total_amount(self) -> Decimal:
-        """
-        Formula: VHM × sahifalar_soni × 412000 × 2.1 × 1.12 × 1.4
-        VHM (selected_base_coefficient) — 12-jadvaldan olingan qiymat, frontend yuboradi.
-        """
+        """Formula: VHM × sahifalar_soni × BHM(412_000) × 2.1 × 1.12 [× 1.4 agar ilmiy tadqiqot talab etilsa]"""
         if self.selected_base_coefficient <= 0 or self.total_pages <= 0:
             self.final_total_amount = Decimal("0.00")
             return self.final_total_amount
 
+        research_factor = Decimal("1.4") if self.is_research_required else Decimal("1")
         result = (
             self.selected_base_coefficient
             * Decimal(self.total_pages)
             * MROT
             * Decimal("2.1")
             * Decimal("1.12")
-            * Decimal("1.4")
+            * research_factor
         ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         self.final_total_amount = result
         return result

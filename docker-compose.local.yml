@@ -1,0 +1,103 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shnq_local_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: shnq_local
+      POSTGRES_USER: shnq_user
+      POSTGRES_PASSWORD: shnq1234
+    volumes:
+      - postgres_local_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shnq_user -d shnq_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - shnq_local_net
+
+  backend:
+    build:
+      context: ./backend
+    container_name: shnq_local_backend
+    restart: unless-stopped
+    environment:
+      DB_ENGINE: postgres
+      POSTGRES_DB: shnq_local
+      POSTGRES_USER: shnq_user
+      POSTGRES_PASSWORD: shnq1234
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      DJANGO_SECRET_KEY: local-dev-secret-key-change-in-prod
+      DJANGO_DEBUG: "True"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+      CORS_ALLOW_ALL_ORIGINS: "True"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:1000"
+    volumes:
+      - ./backend/staticfiles:/app/staticfiles
+      - ./backend/media:/app/media
+      - ./adreska-246ee-e5b2502b05d5.json:/app/credentials.json:ro
+    networks:
+      - shnq_local_net
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api
+    container_name: shnq_local_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:1001"
+    networks:
+      - shnq_local_net
+
+  # Google Sheets dan avtomatik yuklash (har 30 daqiqada)
+  sync_job:
+    build:
+      context: ./backend
+    container_name: shnq_local_sync
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo 'Sync job ishga tushdi. PostgreSQL kutilmoqda...';
+        until nc -z postgres 5432; do sleep 2; done;
+        echo 'Birinchi sync boshlanmoqda...';
+        python manage.py sync_from_sheets --credentials /app/credentials.json;
+        echo 'Har 10 daqiqada sync bajariladi.';
+        while true; do
+          sleep 86400;
+          echo 'Kunlik avtomatik sync boshlandi...';
+          python manage.py sync_from_sheets --credentials /app/credentials.json;
+          echo 'Sync tugadi.';
+        done
+      "
+    environment:
+      DB_ENGINE: postgres
+      POSTGRES_DB: shnq_local
+      POSTGRES_USER: shnq_user
+      POSTGRES_PASSWORD: shnq1234
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      DJANGO_SECRET_KEY: local-dev-secret-key-change-in-prod
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./adreska-246ee-e5b2502b05d5.json:/app/credentials.json:ro
+    networks:
+      - shnq_local_net
+
+volumes:
+  postgres_local_data:
+
+networks:
+  shnq_local_net:

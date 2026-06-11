@@ -13,6 +13,7 @@ from .views import (
     HealthCheckAPIView,
     NormativeCoefficientListAPIView,
     OrganizationSettingsAPIView,
+    SyncFromSheetsAPIView,
 )
 
 
@@ -62,5 +63,10 @@ urlpatterns = [
         "organization-settings/",
         OrganizationSettingsAPIView.as_view(),
         name="organization-settings",
+    ),
+    path(
+        "sync-sheets/",
+        SyncFromSheetsAPIView.as_view(),
+        name="sync-sheets",
     ),
 ]

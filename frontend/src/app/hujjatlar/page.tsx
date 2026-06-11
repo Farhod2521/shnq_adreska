@@ -67,42 +67,55 @@ type Table12Level = "1" | "2" | "3";
 type Table12Row = Record<Table12Key, number>;
 type Table12Entry = Record<Table12Level, Table12Row>;
 
+// Metodika jadvali (БҲМ/bet): 6 tur × 3 toifa × 3 ish turi = 54 qiymat
+// Manba: Меҳнат сарфи jadvali (Р/Ш/Х/Н/С/Т)
 const TABLE_12: Record<string, Table12Entry> = {
+  // Т — Техник регламент
   technical_regulation: {
     "1": { new: 15, rework_harmonization: 8,  rework_modification: 8,  additional_change: 3 },
     "2": { new: 28, rework_harmonization: 14, rework_modification: 14, additional_change: 5 },
     "3": { new: 43, rework_harmonization: 22, rework_modification: 22, additional_change: 7 },
   },
+  // Ш — Шаҳарсозлик нормалари ва қоидалари / Миллий қурилиш нормалари (MQN)
   shnq: {
     "1": { new: 14, rework_harmonization: 7,  rework_modification: 7,  additional_change: 2 },
     "2": { new: 26, rework_harmonization: 13, rework_modification: 13, additional_change: 4 },
     "3": { new: 40, rework_harmonization: 20, rework_modification: 20, additional_change: 7 },
   },
-  srn: {
+  mqn: {
     "1": { new: 14, rework_harmonization: 7,  rework_modification: 7,  additional_change: 2 },
     "2": { new: 26, rework_harmonization: 13, rework_modification: 13, additional_change: 4 },
     "3": { new: 40, rework_harmonization: 20, rework_modification: 20, additional_change: 7 },
   },
+  // Х — Халқаро ёки хорижий нормалар (Eurocode)
   eurocode: {
     "1": { new: 13, rework_harmonization: 7,  rework_modification: 7,  additional_change: 2 },
     "2": { new: 24, rework_harmonization: 12, rework_modification: 12, additional_change: 4 },
     "3": { new: 37, rework_harmonization: 19, rework_modification: 19, additional_change: 6 },
   },
-  qr: {
+  // Н — Низом, қоида, йўриқнома, тартиб
+  nizom: {
     "1": { new: 12, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
     "2": { new: 23, rework_harmonization: 12, rework_modification: 12, additional_change: 4 },
     "3": { new: 34, rework_harmonization: 17, rework_modification: 17, additional_change: 6 },
   },
-  mqn: {
-    "1": { new: 12, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
-    "2": { new: 23, rework_harmonization: 12, rework_modification: 12, additional_change: 4 },
-    "3": { new: 34, rework_harmonization: 17, rework_modification: 17, additional_change: 6 },
-  },
+  // С — Стандарт, Идоравий қурилиш нормалари, Смета-ресурс нормалари (SRN, QR)
   standard: {
     "1": { new: 11, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
     "2": { new: 21, rework_harmonization: 11, rework_modification: 11, additional_change: 4 },
     "3": { new: 32, rework_harmonization: 16, rework_modification: 16, additional_change: 5 },
   },
+  srn: {
+    "1": { new: 11, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
+    "2": { new: 21, rework_harmonization: 11, rework_modification: 11, additional_change: 4 },
+    "3": { new: 32, rework_harmonization: 16, rework_modification: 16, additional_change: 5 },
+  },
+  qr: {
+    "1": { new: 11, rework_harmonization: 6,  rework_modification: 6,  additional_change: 2 },
+    "2": { new: 21, rework_harmonization: 11, rework_modification: 11, additional_change: 4 },
+    "3": { new: 32, rework_harmonization: 16, rework_modification: 16, additional_change: 5 },
+  },
+  // Р — Қўлланма, маълумотнома, бошқа мажбурий бўлмаган ҳужжатлар
   methodical_guide: {
     "1": { new: 10, rework_harmonization: 5,  rework_modification: 5,  additional_change: 2 },
     "2": { new: 19, rework_harmonization: 10, rework_modification: 10, additional_change: 3 },
@@ -117,6 +130,58 @@ const getVhmValue = (
 ): number => {
   return TABLE_12[normativeType]?.[complexityLevel]?.[documentCategory] ?? 0;
 };
+
+// Har bir hujjat uchun formuladan yakuniy summa hisoblash
+// Formula: VHM × sahifa × BHM(412_000) × 2.1 × 1.12 [× 1.4 agar ilmiy tadqiqot kerak bo'lsa]
+const calcDocAmount = (
+  normativeType: string,
+  complexityLevel: ComplexityLevel,
+  documentCategory: DocumentCategory,
+  totalPages: number,
+  isResearchRequired: boolean,
+): number => {
+  const vhm = getVhmValue(normativeType, complexityLevel, documentCategory as Table12Key);
+  const rf = isResearchRequired ? 1.4 : 1;
+  return vhm * totalPages * MROT_VALUE * 2.1 * 1.12 * rf;
+};
+
+// 12-jadval popup uchun 6 ta guruh (Metodika jadvalining 6 qatori)
+const JADVAL_12_GROUPS: {
+  label: string;
+  types: string[];
+  tableKey: string;
+}[] = [
+  {
+    label: "Texnik reglament",
+    types: ["technical_regulation"],
+    tableKey: "technical_regulation",
+  },
+  {
+    label: "Shaharsozlik normalari va qoidalari, Milliy qurilish normalari",
+    types: ["shnq", "mqn"],
+    tableKey: "shnq",
+  },
+  {
+    label: "Xalqaro yoki xorijiy normalar",
+    types: ["eurocode"],
+    tableKey: "eurocode",
+  },
+  {
+    label: "Qurilishda qo'llaniladigan nizom, qoida, yo'riqnoma, tartib va sh.k.",
+    types: ["nizom"],
+    tableKey: "nizom",
+  },
+  {
+    label: "Standartlar, Idoraviy qurilish normalari, smeta-resurs normalari",
+    types: ["standard", "srn", "qr"],
+    tableKey: "standard",
+  },
+  {
+    label: "Qo'llanma, ma'lumotnoma, boshqa majburiy bo'lmagan hujjatlar",
+    types: ["methodical_guide"],
+    tableKey: "methodical_guide",
+  },
+];
 
 type DocumentCalculationItem = {
   id: number;
@@ -355,6 +420,17 @@ export default function HujjatlarPage() {
   const [sortKey, setSortKey] = useState<"name" | "total_pages" | "final_total_amount" | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const printRef = useRef<HTMLDivElement>(null);
+
+  // Google Sheets manual sync
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncCount, setSyncCount] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    return parseInt(localStorage.getItem("shnq_sync_count") ?? "0", 10);
+  });
+  const [lastSyncTime, setLastSyncTime] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("shnq_last_sync") ?? "";
+  });
 
   // Shartnoma
   const [isContractModalOpen, setIsContractModalOpen] = useState(false);
@@ -686,6 +762,31 @@ export default function HujjatlarPage() {
     void loadNormativeOptions();
   }, []);
 
+  const handleSyncSheets = async () => {
+    setIsSyncing(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/sync-sheets/`, { method: "POST" });
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({}))) as { detail?: string };
+        throw new Error(err.detail ?? "Sync xatoligi yuz berdi.");
+      }
+      const now = new Date().toLocaleTimeString("uz-UZ", { hour: "2-digit", minute: "2-digit" });
+      const newCount = syncCount + 1;
+      setSyncCount(newCount);
+      setLastSyncTime(now);
+      localStorage.setItem("shnq_sync_count", String(newCount));
+      localStorage.setItem("shnq_last_sync", now);
+      setToastMessage(`Sheets dan yangilandi. Jami: ${newCount} marta.`);
+      setShowToast(true);
+      await loadDocuments();
+    } catch (error) {
+      setToastMessage(error instanceof Error ? error.message : "Sync amalga oshmadi.");
+      setShowToast(true);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
     if (!showToast) {
       return;
@@ -701,8 +802,9 @@ export default function HujjatlarPage() {
     formValues.document_category as Table12Key,
   );
 
-  // Yangi formula: VHM × sahifalar_soni × 412000 × 2.1 × 1.12 × 1.4
-  const finalTotalAmount = vhmValue * toNumber(formValues.total_pages) * MROT_VALUE * 2.1 * 1.12 * 1.4;
+  // Formula: VHM × sahifalar_soni × BHM(412_000) × 2.1 × 1.12 [× 1.4 agar ilmiy tadqiqot kerak bo'lsa]
+  const researchFactor = formValues.is_research_required ? 1.4 : 1;
+  const finalTotalAmount = vhmValue * toNumber(formValues.total_pages) * MROT_VALUE * 2.1 * 1.12 * researchFactor;
 
   // Kalendar reja — avtomatik hisoblangan bosqich summalar
   const BILLION = 1_000_000_000;
@@ -1003,8 +1105,8 @@ export default function HujjatlarPage() {
         aVal = Number(a.total_pages);
         bVal = Number(b.total_pages);
       } else {
-        aVal = toNumber(a.final_total_amount);
-        bVal = toNumber(b.final_total_amount);
+        aVal = calcDocAmount(a.normative_type, a.complexity_level, a.document_category, Number(a.total_pages), a.is_research_required);
+        bVal = calcDocAmount(b.normative_type, b.complexity_level, b.document_category, Number(b.total_pages), b.is_research_required);
       }
       if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
@@ -1076,6 +1178,34 @@ export default function HujjatlarPage() {
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
+              {/* Google Sheets yangilash tugmasi */}
+              <div className="flex flex-col items-end gap-0.5">
+                <button
+                  className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition-all ${
+                    isSyncing
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-600 cursor-not-allowed"
+                      : "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50 hover:shadow"
+                  }`}
+                  disabled={isSyncing}
+                  onClick={handleSyncSheets}
+                  type="button"
+                  title="Google Sheets dan ma'lumotlarni yangilash"
+                >
+                  <span
+                    className={`material-symbols-outlined text-[18px] ${isSyncing ? "animate-spin" : ""}`}
+                    style={isSyncing ? { animationDuration: "1s" } : {}}
+                  >
+                    {isSyncing ? "progress_activity" : "sync"}
+                  </span>
+                  {isSyncing ? "Yangilanmoqda..." : "Hujjatlarni yangilash"}
+                </button>
+                {syncCount > 0 && (
+                  <span className="text-[11px] text-slate-400">
+                    {syncCount} marta yangilandi{lastSyncTime ? ` · ${lastSyncTime}` : ""}
+                  </span>
+                )}
+              </div>
+
               <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow">
                 <span className="material-symbols-outlined text-[18px] text-slate-400">format_list_bulleted</span>
                 Umumiy ro&apos;yxat
@@ -1200,7 +1330,8 @@ export default function HujjatlarPage() {
                         label: doc.complexity_level,
                         className: "bg-slate-100 text-slate-600",
                       };
-                      const isHighAmount = toNumber(doc.final_total_amount) > HIGH_AMOUNT_THRESHOLD;
+                      const docCalcAmount = calcDocAmount(doc.normative_type, doc.complexity_level, doc.document_category, Number(doc.total_pages), doc.is_research_required);
+                      const isHighAmount = docCalcAmount > HIGH_AMOUNT_THRESHOLD;
                       const isEven = index % 2 === 0;
                       return (
                         <tr
@@ -1273,7 +1404,7 @@ export default function HujjatlarPage() {
                           </td>
                           <td className="px-5 py-3.5 text-right">
                             <p className="text-sm font-semibold tabular-nums text-slate-900 whitespace-nowrap">
-                              {formatMoney(toNumber(doc.final_total_amount))}
+                              {formatMoney(docCalcAmount)}
                             </p>
                             <p className="text-[11px] text-slate-400">UZS</p>
                           </td>
@@ -1814,7 +1945,7 @@ export default function HujjatlarPage() {
                         MROT × K
                       </span>
                       <div className="text-lg font-black text-primary">
-                        {formatMoney(MROT_VALUE)} × 2.1 × 1.12 × 1.4
+                        {formatMoney(MROT_VALUE)} × 2.1 × 1.12{formValues.is_research_required ? " × 1.4" : ""}
                       </div>
                       <span className="text-xs text-slate-500">so&apos;m</span>
                     </div>
@@ -1827,7 +1958,7 @@ export default function HujjatlarPage() {
                     </div>
                   </div>
                   <p className="mt-4 text-xs text-slate-500">
-                    Formula: VHM × sahifa_soni × 412,000 × 2.1 × 1.12 × 1.4
+                    Formula: VHM × sahifa_soni × BHM(412,000) × 2.1 × 1.12{formValues.is_research_required ? " × 1.4 (ilmiy tadqiqot)" : ""}
                   </p>
 
                   {/* Kalendar reja */}
@@ -2011,24 +2142,23 @@ export default function HujjatlarPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(["technical_regulation", "shnq", "srn", "eurocode", "qr", "mqn", "standard", "methodical_guide"] as const).flatMap((normType) => {
-                    const isSelectedType = formValues.normative_type === normType;
-                    const typeLabel = normativeTypeLabelMap[normType] || normType.replace(/_/g, " ");
+                  {JADVAL_12_GROUPS.flatMap((group) => {
+                    const isSelectedGroup = group.types.includes(formValues.normative_type);
                     return (["1", "2", "3"] as ComplexityLevel[]).map((level, levelIdx) => {
-                      const isSelectedRow = isSelectedType && formValues.complexity_level === level;
+                      const isSelectedRow = isSelectedGroup && formValues.complexity_level === level;
                       return (
                         <tr
-                          key={`${normType}-${level}`}
-                          className={isSelectedRow ? "bg-primary/15" : isSelectedType ? "bg-primary/5" : ""}
+                          key={`${group.tableKey}-${level}`}
+                          className={isSelectedRow ? "bg-primary/15" : isSelectedGroup ? "bg-primary/5" : ""}
                         >
                           {levelIdx === 0 && (
                             <td
                               className={`border border-slate-300 px-3 py-2 text-xs font-semibold ${
-                                isSelectedType ? "bg-primary/10 text-primary" : "text-slate-700"
+                                isSelectedGroup ? "bg-primary/10 text-primary" : "text-slate-700"
                               }`}
                               rowSpan={3}
                             >
-                              {typeLabel}
+                              {group.label}
                             </td>
                           )}
                           <td
@@ -2039,7 +2169,7 @@ export default function HujjatlarPage() {
                             {level === "1" ? "I" : level === "2" ? "II" : "III"}
                           </td>
                           {(["new", "rework_harmonization", "additional_change"] as const).map((cat) => {
-                            const val = TABLE_12[normType]?.[level]?.[cat] ?? 0;
+                            const val = TABLE_12[group.tableKey]?.[level]?.[cat] ?? 0;
                             const isSelectedCell = isSelectedRow && formValues.document_category === cat;
                             return (
                               <td
@@ -2049,7 +2179,7 @@ export default function HujjatlarPage() {
                                     ? "bg-primary font-black text-sm text-white"
                                     : isSelectedRow
                                     ? "bg-primary/10 font-semibold text-primary"
-                                    : isSelectedType && formValues.document_category === cat
+                                    : isSelectedGroup && formValues.document_category === cat
                                     ? "bg-primary/8 text-slate-700"
                                     : "text-slate-700"
                                 }`}
@@ -2067,7 +2197,10 @@ export default function HujjatlarPage() {
               <p className="mt-3 text-xs text-slate-500">
                 Hozirgi tanlov:{" "}
                 <span className="font-semibold text-primary">
-                  {normativeTypeLabelMap[formValues.normative_type] || formValues.normative_type || "—"}
+                  {JADVAL_12_GROUPS.find((g) => g.types.includes(formValues.normative_type))?.label ||
+                    normativeTypeLabelMap[formValues.normative_type] ||
+                    formValues.normative_type ||
+                    "—"}
                 </span>{" "}
                 &mdash; {formValues.complexity_level}-toifa &mdash; {categoryLabelMap[formValues.document_category]}{" "}
                 = <span className="font-black text-primary">{vhmValue > 0 ? vhmValue : "—"}</span> VHM/sahifa
@@ -2269,9 +2402,11 @@ export default function HujjatlarPage() {
                             </td>
                           </tr>
                           <tr>
-                            <td className="border border-slate-300 p-3">Koeffitsient (K = 2.1 × 1.12 × 1.4)</td>
+                            <td className="border border-slate-300 p-3">
+                              Koeffitsient (K = 2.1 × 1.12{selectedDocument?.is_research_required ? " × 1.4" : ""})
+                            </td>
                             <td className="border border-slate-300 p-3 text-right tabular-nums">
-                              3.2928
+                              {selectedDocument?.is_research_required ? "3.2928" : "2.352"}
                             </td>
                           </tr>
                           <tr>
@@ -2279,7 +2414,15 @@ export default function HujjatlarPage() {
                               Yakuniy hisoblangan summa
                             </td>
                             <td className="border border-slate-300 p-4 text-right text-base text-primary tabular-nums font-bold">
-                              {formatMoney(toNumber(selectedDocument?.final_total_amount))}
+                              {selectedDocument
+                                ? formatMoney(calcDocAmount(
+                                    selectedDocument.normative_type,
+                                    selectedDocument.complexity_level,
+                                    selectedDocument.document_category,
+                                    Number(selectedDocument.total_pages),
+                                    selectedDocument.is_research_required,
+                                  ))
+                                : "—"}
                             </td>
                           </tr>
                         </tbody>
