@@ -1,0 +1,33 @@
+# Google service account credentials — HECH QACHON commit qilmang
+adreska-246ee-e5b2502b05d5.json
+*.json.credentials
+
+# Excel fayllar
+*.xlsx
+*.xls
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Django
+*.sqlite3
+/backend/db.sqlite3
+/backend/staticfiles/
+/backend/media/
+
+# Node
+node_modules/
+.next/
+frontend/.next/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
