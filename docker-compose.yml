@@ -35,6 +35,7 @@ services:
       - ./backend/staticfiles:/app/staticfiles
       - ./backend/media:/app/media
       - ./backend/contract_templates:/app/contract_templates
+      - ./adreska-246ee-e5b2502b05d5.json:/app/credentials.json:ro
     networks:
       - shnq_net
 
