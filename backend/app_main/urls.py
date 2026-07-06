@@ -7,6 +7,7 @@ from .views import (
     DocumentCalculationReportTableAPIView,
     DocumentCalculationRetrieveUpdateDestroyAPIView,
     DocumentCalculationXlsxImportAPIView,
+    DocumentBayonnomaAPIView,
     DocumentContractAPIView,
     DocumentKalendarRejaAPIView,
     DocumentTexnikTopshiriqAPIView,
@@ -58,6 +59,11 @@ urlpatterns = [
         "document-calculations/<int:pk>/texnik-topshiriq/",
         DocumentTexnikTopshiriqAPIView.as_view(),
         name="document-calculation-texnik-topshiriq",
+    ),
+    path(
+        "document-calculations/<int:pk>/bayonnoma/",
+        DocumentBayonnomaAPIView.as_view(),
+        name="document-calculation-bayonnoma",
     ),
     path(
         "organization-settings/",

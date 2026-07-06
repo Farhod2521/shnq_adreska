@@ -459,6 +459,14 @@ export default function HujjatlarPage() {
   const [kalendarDocName, setKalendarDocName] = useState("");
   const kalendarPreviewRef = useRef<HTMLDivElement>(null);
 
+  // Bayonnoma
+  const [isBayonnomaModalOpen, setIsBayonnomaModalOpen] = useState(false);
+  const [isBayonnomaLoading, setIsBayonnomaLoading] = useState(false);
+  const [bayonnomaDocx64, setBayonnomaDocx64] = useState("");
+  const [bayonnomaFilename, setBayonnomaFilename] = useState("");
+  const [bayonnomaDocName, setBayonnomaDocName] = useState("");
+  const bayonnomaPreviewRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const previous = document.body.style.overflow;
     if (isModalOpen || isCreateModalOpen || isDeleteConfirmOpen) {
@@ -724,6 +732,60 @@ export default function HujjatlarPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = kalendarFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openBayonnomaModal = async (doc: DocumentCalculationItem) => {
+    setIsBayonnomaModalOpen(true);
+    setIsBayonnomaLoading(true);
+    setBayonnomaDocx64("");
+    setBayonnomaDocName(doc.name);
+    setBayonnomaFilename(`bayonnoma_${doc.id}.docx`);
+    try {
+      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/bayonnoma/`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error ?? "Bayonnomani yuklashda xatolik yuz berdi.");
+        setIsBayonnomaModalOpen(false);
+        return;
+      }
+      const payload = (await res.json()) as { data: string; filename: string; doc_name: string };
+      setBayonnomaFilename(payload.filename);
+      setBayonnomaDocx64(payload.data);
+    } catch {
+      alert("Bayonnomani yuklashda xatolik yuz berdi.");
+      setIsBayonnomaModalOpen(false);
+    } finally {
+      setIsBayonnomaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!bayonnomaDocx64 || !bayonnomaPreviewRef.current) return;
+    const render = async () => {
+      const { renderAsync } = await import("docx-preview");
+      const binary = Uint8Array.from(atob(bayonnomaDocx64), (c) => c.charCodeAt(0));
+      if (bayonnomaPreviewRef.current) {
+        bayonnomaPreviewRef.current.innerHTML = "";
+        await renderAsync(binary.buffer as ArrayBuffer, bayonnomaPreviewRef.current, undefined, {
+          className: "docx-preview-wrapper",
+        });
+      }
+    };
+    void render();
+  }, [bayonnomaDocx64]);
+
+  const downloadBayonnoma = () => {
+    if (!bayonnomaDocx64) return;
+    const binary = Uint8Array.from(atob(bayonnomaDocx64), (c) => c.charCodeAt(0));
+    const blob = new Blob([binary], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = bayonnomaFilename;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1367,6 +1429,14 @@ export default function HujjatlarPage() {
                                 Shartnoma
                               </button>
                               <button
+                                className="flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-600 transition-colors hover:bg-sky-100"
+                                onClick={() => openBayonnomaModal(doc)}
+                                type="button"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">visibility</span>
+                                Bayonnoma
+                              </button>
+                              <button
                                 className="flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-600 transition-colors hover:bg-emerald-100"
                                 onClick={() => openKalendarModal(doc)}
                                 type="button"
@@ -1655,6 +1725,61 @@ export default function HujjatlarPage() {
               ) : (
                 <div
                   ref={kalendarPreviewRef}
+                  className="mx-auto max-w-4xl rounded-xl bg-white shadow"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bayonnoma modal */}
+      {isBayonnomaModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          onClick={() => setIsBayonnomaModalOpen(false)}
+        >
+          <div
+            className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ maxHeight: "92vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 bg-sky-50 px-6 py-4">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider text-sky-700 uppercase">Bayonnoma</p>
+                <h2 className="mt-0.5 max-w-[52ch] truncate text-sm font-bold text-slate-900">{bayonnomaDocName}</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-sky-700 disabled:opacity-40"
+                  disabled={!bayonnomaDocx64}
+                  onClick={downloadBayonnoma}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Word yuklab olish
+                </button>
+                <button
+                  className="flex size-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100"
+                  onClick={() => setIsBayonnomaModalOpen(false)}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-6">
+              {isBayonnomaLoading ? (
+                <div className="flex h-64 items-center justify-center gap-3 text-slate-400">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-sky-600 border-t-transparent" />
+                  <span className="text-sm">Yuklanmoqda...</span>
+                </div>
+              ) : (
+                <div
+                  ref={bayonnomaPreviewRef}
                   className="mx-auto max-w-4xl rounded-xl bg-white shadow"
                 />
               )}

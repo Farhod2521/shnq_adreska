@@ -826,6 +826,18 @@ class DocumentTexnikTopshiriqAPIView(DocumentContractAPIView):
         return response
 
 
+class DocumentBayonnomaAPIView(DocumentContractAPIView):
+    """Bayonnoma (kelishuv qiymati to'g'risida) shablonini to'ldirib base64 .docx qaytaradi."""
+
+    TEMPLATE_NAME = "bayonnoma.docx"
+
+    def get(self, request, pk):
+        response = super().get(request, pk)
+        if response.status_code == 200:
+            response.data["filename"] = f"bayonnoma_{pk}.docx"
+        return response
+
+
 class SyncFromSheetsAPIView(APIView):
     """Google Sheets dan bazani qo'lda yangilash."""
 
