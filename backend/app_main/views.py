@@ -567,6 +567,22 @@ def _three_digits_to_words(n: int) -> str:
     return " ".join(parts)
 
 
+def _fmt_money(value) -> str:
+    """Summani mingliklar probel bilan ajratib formatlaydi.
+
+    Misol: 511644672.00 → "511 644 672",  2369128.50 → "2 369 128.50"
+    Butun bo'lsa .00 tushiriladi.
+    """
+    try:
+        q = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, TypeError, ValueError):
+        return str(value)
+    s = f"{q:,.2f}".replace(",", " ")  # '511 644 672.00'
+    if s.endswith(".00"):
+        s = s[:-3]
+    return s
+
+
 def number_to_uz_words(amount) -> str:
     """
     Decimal/float/int sonni o'zbek tilida so'zga o'giradi.
@@ -760,14 +776,14 @@ class DocumentContractAPIView(APIView):
             "shartnoma_number": doc.contract_number or "",
             "current_year_percent": str(doc.current_year_percent),
             "next_year_percent": str(max(Decimal("0"), Decimal("100") - doc.current_year_percent)),
-            "current_year_amount": str(
-                (doc.final_total_amount * doc.current_year_percent / Decimal("100")).quantize(Decimal("0.01"))
+            "current_year_amount": _fmt_money(
+                doc.final_total_amount * doc.current_year_percent / Decimal("100")
             ),
-            "next_year_amount": str(
-                (doc.final_total_amount * max(Decimal("0"), Decimal("100") - doc.current_year_percent) / Decimal("100")).quantize(Decimal("0.01"))
+            "next_year_amount": _fmt_money(
+                doc.final_total_amount * max(Decimal("0"), Decimal("100") - doc.current_year_percent) / Decimal("100")
             ),
             "notes": doc.notes or "",
-            "final_total_amount": str(doc.final_total_amount),
+            "final_total_amount": _fmt_money(doc.final_total_amount),
             "final_total_amount_words": number_to_uz_words(doc.final_total_amount),
             "created_at": doc.created_at.strftime("%d.%m.%Y") if doc.created_at else "",
             # Tashkilot sozlamalari
@@ -777,16 +793,16 @@ class DocumentContractAPIView(APIView):
             # Kalendar reja bosqichlari
             "I_start": doc.stage1_start,
             "I_end": doc.stage1_end,
-            "I_summa": str(doc.stage1_amount),
+            "I_summa": _fmt_money(doc.stage1_amount),
             "II_start": doc.stage2_start,
             "II_end": doc.stage2_end,
-            "II_summa": str(doc.stage2_amount),
+            "II_summa": _fmt_money(doc.stage2_amount),
             "III_start": doc.stage3_start,
             "III_end": doc.stage3_end,
-            "III_summa": str(doc.stage3_amount),
+            "III_summa": _fmt_money(doc.stage3_amount),
             "IV_start": doc.stage4_start,
             "IV_end": doc.stage4_end,
-            "IV_summa": str(doc.stage4_amount),
+            "IV_summa": _fmt_money(doc.stage4_amount),
         }
 
         buf = _fill_docx(template_path, placeholders)
