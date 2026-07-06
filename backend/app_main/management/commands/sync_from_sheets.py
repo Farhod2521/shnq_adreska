@@ -191,6 +191,10 @@ class Command(BaseCommand):
             col_l = _str(row[11])
 
             normative_type = TYPE_MAP.get(col_n, "shnq")
+            # Hujjat nomi "SRN" bilan boshlansa — turini SRN qilib belgilaymiz
+            # (Sheets'dagi harf ba'zan "standard" deb noto'g'ri belgilangan)
+            if col_c.upper().lstrip().startswith("SRN"):
+                normative_type = "srn"
             document_category = STATUS_MAP.get(col_k, DocumentCalculation.DocumentCategory.NEW)
 
             try:
