@@ -767,6 +767,11 @@ class DocumentContractAPIView(APIView):
             "document_category": doc.document_category,
             "total_pages": str(doc.total_pages),
             "complexity_level": str(doc.complexity_level),
+            # TZ (Texnik topshiriq) uchun — o'qiladigan ko'rinishdagi qiymatlar
+            "complexity_label": doc.get_complexity_level_display(),
+            "document_category_label": doc.get_document_category_display(),
+            "sources_count": str(doc.sources_count),
+            "research_status": "Ha" if doc.is_research_required else "Yo'q",
             "executor_organization": doc.executor_organization or "",
             "development_deadline": doc.development_deadline or "",
             "shartnoma_number": doc.contract_number or "",
@@ -827,14 +832,14 @@ class DocumentKalendarRejaAPIView(DocumentContractAPIView):
 
 
 class DocumentTexnikTopshiriqAPIView(DocumentContractAPIView):
-    """Texnik topshiriq shablonini to'ldirib base64 .docx qaytaradi."""
+    """Texnik topshiriq (TZ) shablonini to'ldirib base64 .docx qaytaradi."""
 
-    TEMPLATE_NAME = "texnik_topshiriq.docx"
+    TEMPLATE_NAME = "TZ.docx"
 
     def get(self, request, pk):
         response = super().get(request, pk)
         if response.status_code == 200:
-            response.data["filename"] = f"texnik_topshiriq_{pk}.docx"
+            response.data["filename"] = f"TZ_{pk}.docx"
         return response
 
 

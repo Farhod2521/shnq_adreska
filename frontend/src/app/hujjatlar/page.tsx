@@ -37,6 +37,7 @@ type DocumentFormValues = {
   complexity_level: ComplexityLevel;
   document_category: DocumentCategory;
   total_pages: number;
+  sources_count: number;
   is_research_required: boolean;
   current_year_percent: number;
   development_deadline: string;
@@ -193,6 +194,7 @@ type DocumentCalculationItem = {
   calculation_category_name?: string;
   document_category: DocumentCategory;
   complexity_level: ComplexityLevel;
+  sources_count?: number;
   is_research_required: boolean;
   current_year_percent?: string;
   development_deadline?: string;
@@ -377,6 +379,7 @@ const getInitialFormValues = (): DocumentFormValues => ({
   complexity_level: "1",
   document_category: "new",
   total_pages: 1,
+  sources_count: 0,
   is_research_required: false,
   current_year_percent: 0,
   development_deadline: "",
@@ -531,6 +534,7 @@ export default function HujjatlarPage() {
       complexity_level: document.complexity_level ?? "1",
       document_category: document.document_category ?? "new",
       total_pages: Number(document.total_pages) || 1,
+      sources_count: Number(document.sources_count) || 0,
       is_research_required: Boolean(document.is_research_required),
       current_year_percent: toNumber(document.current_year_percent),
       development_deadline: document.development_deadline ?? "",
@@ -966,6 +970,7 @@ export default function HujjatlarPage() {
           complexity_level: formValues.complexity_level,
           document_category: formValues.document_category,
           total_pages: Number(formValues.total_pages) || 0,
+          sources_count: Number(formValues.sources_count) || 0,
           selected_base_coefficient: vhmValue,
           calculation_category:
             formValues.calculation_category === "" ? null : Number(formValues.calculation_category),
@@ -1416,7 +1421,7 @@ export default function HujjatlarPage() {
                             {doc.designation && (
                               <p className="mb-0.5 text-[11px] font-bold text-slate-400">{doc.designation}</p>
                             )}
-                            <p className="max-w-[42ch] truncate text-sm font-semibold leading-tight text-slate-900">
+                            <p className="max-w-[72ch] line-clamp-2 text-sm font-semibold leading-tight text-slate-900">
                               {doc.name}
                             </p>
                             <div className="mt-1 flex items-center gap-2">
@@ -1979,6 +1984,46 @@ export default function HujjatlarPage() {
                         />
                         <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-slate-400">bet</span>
                       </div>
+                    </div>
+
+                    {/* Foydalanilgan manbalar soni */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Foydalanilgan manbalar soni
+                      </label>
+                      <div className="relative">
+                        <input
+                          className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                          min={0}
+                          onChange={(event) =>
+                            setFormValues((prev) => ({ ...prev, sources_count: Number(event.target.value) || 0 }))
+                          }
+                          placeholder="0"
+                          type="number"
+                          value={formValues.sources_count}
+                        />
+                        <span className="absolute top-1/2 right-4 -translate-y-1/2 text-sm text-slate-400">ta</span>
+                      </div>
+                    </div>
+
+                    {/* Tadqiqot o'tkazilishi */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Tadqiqot o&apos;tkazilishi
+                      </label>
+                      <select
+                        className="h-12 w-full rounded-lg border border-slate-300 bg-white px-4 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        onChange={(event) =>
+                          setFormValues((prev) => ({
+                            ...prev,
+                            is_research_required: event.target.value === "1",
+                          }))
+                        }
+                        value={formValues.is_research_required ? "1" : "0"}
+                      >
+                        <option value="0">Yo&apos;q</option>
+                        <option value="1">Ha</option>
+                      </select>
                     </div>
 
                     <div className="md:col-span-3">

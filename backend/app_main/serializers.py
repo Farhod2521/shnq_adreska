@@ -60,6 +60,7 @@ class DocumentCalculationSerializer(serializers.ModelSerializer):
             "calculation_category",
             "calculation_category_name",
             "complexity_level",
+            "sources_count",
             "is_research_required",
             "selected_base_coefficient",
             "selected_complexity_coefficient",
@@ -98,6 +99,7 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
         queryset=DocumentCalculationCategory.objects.all(), required=False, allow_null=True
     )
     complexity_level = serializers.ChoiceField(choices=DocumentCalculation.ComplexityLevel.choices)
+    sources_count = serializers.IntegerField(min_value=0, required=False, default=0)
     is_research_required = serializers.BooleanField(required=False, default=False)
     # VHM qiymati — 12-jadvaldan frontend hisoblaydi va yuboradi
     selected_base_coefficient = serializers.DecimalField(

@@ -124,6 +124,10 @@ class DocumentCalculation(models.Model):
         default=1,
         verbose_name="Murakkablik koeffitsienti (saqlangan)",
     )
+    sources_count = models.PositiveIntegerField(
+        default=0,
+        verbose_name="Foydalanilgan manbalar soni",
+    )
     is_research_required = models.BooleanField(
         default=False,
         verbose_name="Tadqiqot o'tkazilishi belgilangan normativ hujjatmi?",
