@@ -364,9 +364,9 @@ const categoryLabelMap: Record<DocumentCategory, string> = {
 };
 
 const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: string }> = {
-  "1": { label: "1", className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80" },
-  "2": { label: "2", className: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80" },
-  "3": { label: "3", className: "bg-red-50 text-red-700 ring-1 ring-red-200/80" },
+  "1": { label: "I", className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80" },
+  "2": { label: "II", className: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80" },
+  "3": { label: "III", className: "bg-red-50 text-red-700 ring-1 ring-red-200/80" },
 };
 
 const getInitialFormValues = (): DocumentFormValues => ({
@@ -2034,7 +2034,7 @@ export default function HujjatlarPage() {
                       />
                     </div>
                     <div className="md:col-span-3">
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">Izoh</label>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">Normativ hujjatni ishlab chiqish uchun asoslar:</label>
                       <textarea
                         className="min-h-[90px] w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-slate-900 focus:border-primary focus:ring-2 focus:ring-primary/20"
                         onChange={(event) =>
