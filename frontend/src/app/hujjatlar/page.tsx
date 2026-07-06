@@ -364,9 +364,9 @@ const categoryLabelMap: Record<DocumentCategory, string> = {
 };
 
 const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: string }> = {
-  "1": { label: "Oddiy", className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80" },
-  "2": { label: "O'rta", className: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80" },
-  "3": { label: "Yuqori", className: "bg-red-50 text-red-700 ring-1 ring-red-200/80" },
+  "1": { label: "1", className: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80" },
+  "2": { label: "2", className: "bg-amber-50 text-amber-700 ring-1 ring-amber-200/80" },
+  "3": { label: "3", className: "bg-red-50 text-red-700 ring-1 ring-red-200/80" },
 };
 
 const getInitialFormValues = (): DocumentFormValues => ({
