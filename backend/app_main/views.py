@@ -568,19 +568,15 @@ def _three_digits_to_words(n: int) -> str:
 
 
 def _fmt_money(value) -> str:
-    """Summani mingliklar probel bilan ajratib formatlaydi.
+    """Summani mingliklar probel bilan ajratib, 2 xona kasr bilan formatlaydi.
 
-    Misol: 511644672.00 → "511 644 672",  2369128.50 → "2 369 128.50"
-    Butun bo'lsa .00 tushiriladi.
+    Misol: 511644672.00 → "511 644 672.00",  2369128.5 → "2 369 128.50"
     """
     try:
         q = Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     except (InvalidOperation, TypeError, ValueError):
         return str(value)
-    s = f"{q:,.2f}".replace(",", " ")  # '511 644 672.00'
-    if s.endswith(".00"):
-        s = s[:-3]
-    return s
+    return f"{q:,.2f}".replace(",", " ")  # '511 644 672.00'
 
 
 def number_to_uz_words(amount) -> str:
@@ -784,7 +780,7 @@ class DocumentContractAPIView(APIView):
             ),
             "notes": doc.notes or "",
             "final_total_amount": _fmt_money(doc.final_total_amount),
-            "final_total_amount_words": number_to_uz_words(doc.final_total_amount),
+            "final_total_amount_words": f"({number_to_uz_words(doc.final_total_amount)})",
             "created_at": doc.created_at.strftime("%d.%m.%Y") if doc.created_at else "",
             # Tashkilot sozlamalari
             "institute_director": org.institute_director,
