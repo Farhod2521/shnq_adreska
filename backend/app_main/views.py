@@ -532,6 +532,8 @@ BOLD_PLACEHOLDERS = {
     "final_total_amount_words",
     "amount_2026",
     "amount_2027",
+    "mhb_amount",
+    "mhi_amount",
     "executor_organization",
     "development_deadline",
     "created_at",
@@ -798,6 +800,20 @@ def _selected_vhm(doc):
     return _TABLE_12[group[2]][level][col]
 
 
+# Normativ tur → to'liq nom (Kalkulatsiya sarlavhasi uchun)
+NORMATIVE_TYPE_FULL = {
+    "shnq": "Shaharsozlik normalari va qoidalari",
+    "mqn": "Milliy qurilish normalari",
+    "standard": "Milliy standart",
+    "srn": "Smeta-resurs normalari",
+    "qr": "Idoraviy qurilish normalari",
+    "technical_regulation": "Texnik reglament",
+    "eurocode": "Xalqaro yoki xorijiy normalar",
+    "nizom": "Nizom, qoida, yo'riqnoma",
+    "methodical_guide": "Qo'llanma, ma'lumotnoma",
+}
+
+
 def _append_koeffitsient_appendix(docx_doc, doc):
     """Kalkulatsiya hujjati oxiriga 12-jadvalni (1-ilova) qo'shadi.
 
@@ -967,6 +983,17 @@ class DocumentContractAPIView(APIView):
         if amount_2027 < 0:
             amount_2027 = Decimal("0.00")
 
+        # Kalkulatsiya uchun: MHb (bazaviy narx) va MHi (ilmiy-tadqiqot narxi)
+        #   final = base × 1.4 (agar tadqiqot bo'lsa) → base = final / 1.4, MHi = final - base
+        #   tadqiqot bo'lmasa → base = final, MHi = 0
+        research_factor = Decimal("1.4") if doc.is_research_required else Decimal("1")
+        mhb_amount = (doc.final_total_amount / research_factor).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        mhi_amount = doc.final_total_amount - mhb_amount
+        if mhi_amount < 0:
+            mhi_amount = Decimal("0.00")
+
         placeholders = {
             # Hujjat ma'lumotlari
             "shnq_name": doc.name,
@@ -983,6 +1010,10 @@ class DocumentContractAPIView(APIView):
             "research_status": "Ha" if doc.is_research_required else "Yo'q",
             # Nb izohi uchun — 12-jadvaldan tanlangan VHM/sahifa koeffitsienti (masalan 14)
             "vhm_value": str(_selected_vhm(doc) if _selected_vhm(doc) is not None else ""),
+            # Kalkulatsiya: normativ tur to'liq nomi + MHb/MHi summalari
+            "normative_type_full": NORMATIVE_TYPE_FULL.get(doc.normative_type, "normativ hujjat"),
+            "mhb_amount": _fmt_money(mhb_amount),
+            "mhi_amount": _fmt_money(mhi_amount),
             "executor_organization": doc.executor_organization or "",
             "development_deadline": doc.development_deadline or "",
             "shartnoma_number": doc.contract_number or f"{doc.id}/26",
