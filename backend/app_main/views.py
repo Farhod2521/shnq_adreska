@@ -530,6 +530,8 @@ BOLD_PLACEHOLDERS = {
     "total_pages",
     "final_total_amount",
     "final_total_amount_words",
+    "amount_2026",
+    "amount_2027",
     "executor_organization",
     "development_deadline",
     "created_at",
@@ -774,6 +776,16 @@ class DocumentContractAPIView(APIView):
         doc.recalculate_final_total_amount()
         # doc.final_total_amount endi to'g'ri hisoblangan qiymat (DB'ga saqlanmaydi)
 
+        # 2.1-band uchun yillar bo'yicha taqsimot (Google Sheets'dan keladigan qiymatlar):
+        #   2026-yilga = planned_amount (2026-yilga rejalashtirilgan)
+        #   2027-yil uchun = umumiy - 2026 - 01.01.2026 holatiga bajarilgan (completed_amount)
+        # 01.01.2026 holatidagi summa 2025-yil uchun bajarilgan hisoblanadi.
+        amount_2026 = doc.planned_amount or Decimal("0.00")
+        completed_2025 = doc.completed_amount or Decimal("0.00")
+        amount_2027 = doc.final_total_amount - amount_2026 - completed_2025
+        if amount_2027 < 0:
+            amount_2027 = Decimal("0.00")
+
         placeholders = {
             # Hujjat ma'lumotlari
             "shnq_name": doc.name,
@@ -802,6 +814,9 @@ class DocumentContractAPIView(APIView):
             "notes": doc.notes or "",
             "final_total_amount": _fmt_money(doc.final_total_amount),
             "final_total_amount_words": f"({number_to_uz_words(doc.final_total_amount)})",
+            # 2.1-band: yillar bo'yicha taqsimot
+            "amount_2026": _fmt_money(amount_2026),
+            "amount_2027": _fmt_money(amount_2027),
             "created_at": doc.created_at.strftime("%d.%m.%Y") if doc.created_at else "",
             # Tashkilot sozlamalari
             "institute_director": org.institute_director,
