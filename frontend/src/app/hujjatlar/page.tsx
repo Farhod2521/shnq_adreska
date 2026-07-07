@@ -371,6 +371,17 @@ const complexityDisplayMap: Record<ComplexityLevel, { label: string; className: 
   "3": { label: "III", className: "bg-red-50 text-red-700 ring-1 ring-red-200/80" },
 };
 
+// Ishni bajaruvchi tashkilot — institut nomi uzun bo'lsa qisqartma (TMSITI), aks holda o'zini ko'rsatamiz
+const shortenOrg = (org?: string): string => {
+  const text = (org ?? "").trim();
+  if (!text) return "—";
+  const norm = text.toLowerCase();
+  if (norm.includes("standartlashtirish") && norm.includes("institut")) {
+    return "TMSITI";
+  }
+  return text;
+};
+
 const getInitialFormValues = (): DocumentFormValues => ({
   calculation_category: "",
   designation: "",
@@ -1417,6 +1428,9 @@ export default function HujjatlarPage() {
                     <th className="w-48 px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Toifasi
                     </th>
+                    <th className="w-44 px-5 py-3.5 text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                      Ishni bajaruvchi tashkilot
+                    </th>
                     <th className="w-44 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       <button
                         className="flex w-full items-center justify-end gap-1 transition-colors hover:text-primary"
@@ -1441,7 +1455,7 @@ export default function HujjatlarPage() {
                 <tbody className="divide-y divide-slate-50">
                   {isDocumentsLoading && (
                     <tr>
-                      <td className="px-6 py-8 text-sm text-slate-400" colSpan={10}>
+                      <td className="px-6 py-8 text-sm text-slate-400" colSpan={11}>
                         <AppLoadingState
                           compact
                           subtitle="Ro'yxat backenddan olinmoqda."
@@ -1452,7 +1466,7 @@ export default function HujjatlarPage() {
                   )}
                   {!isDocumentsLoading && filteredDocuments.length === 0 && (
                     <tr>
-                      <td className="px-6 py-10 text-center text-sm text-slate-400" colSpan={10}>
+                      <td className="px-6 py-10 text-center text-sm text-slate-400" colSpan={11}>
                         <div className="flex flex-col items-center gap-2">
                           <span className="material-symbols-outlined text-4xl text-slate-200">inbox</span>
                           <p>{searchQuery.trim() || selectedNormativeTypeFilter ? "Mos hujjat topilmadi." : "Hozircha saqlangan hujjatlar yo'q."}</p>
@@ -1557,6 +1571,11 @@ export default function HujjatlarPage() {
                           <td className="px-5 py-3.5">
                             <span className="text-sm text-slate-600">
                               {categoryLabelMap[doc.document_category]}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-sm text-slate-600" title={doc.executor_organization ?? ""}>
+                              {shortenOrg(doc.executor_organization)}
                             </span>
                           </td>
                           <td className="px-5 py-3.5 text-right">

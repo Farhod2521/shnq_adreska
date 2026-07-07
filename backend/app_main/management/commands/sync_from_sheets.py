@@ -20,7 +20,7 @@ from google.oauth2.service_account import Credentials
 from app_main.models import DocumentCalculation, DocumentCalculationCategory
 
 SPREADSHEET_ID = "1-Ctzg2RPBiSUM-d7Ps74QSNW5mKcG79ZlOrOwdSv9Fg"
-SHEET_GID = 558389990
+SHEET_GID = 1494376803
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
