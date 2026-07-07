@@ -802,7 +802,7 @@ class DocumentContractAPIView(APIView):
             "research_status": "Ha" if doc.is_research_required else "Yo'q",
             "executor_organization": doc.executor_organization or "",
             "development_deadline": doc.development_deadline or "",
-            "shartnoma_number": doc.contract_number or "",
+            "shartnoma_number": doc.contract_number or f"{doc.id}/26",
             "current_year_percent": str(doc.current_year_percent),
             "next_year_percent": str(max(Decimal("0"), Decimal("100") - doc.current_year_percent)),
             "current_year_amount": _fmt_money(

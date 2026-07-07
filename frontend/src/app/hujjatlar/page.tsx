@@ -1427,6 +1427,12 @@ export default function HujjatlarPage() {
                         <SortIcon col="final_total_amount" />
                       </button>
                     </th>
+                    <th className="w-40 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                      2026-yil uchun
+                    </th>
+                    <th className="w-40 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
+                      2027-yil uchun
+                    </th>
                     <th className="w-36 px-5 py-3.5 text-right text-[11px] font-bold tracking-wider text-slate-400 uppercase">
                       Harakatlar
                     </th>
@@ -1435,7 +1441,7 @@ export default function HujjatlarPage() {
                 <tbody className="divide-y divide-slate-50">
                   {isDocumentsLoading && (
                     <tr>
-                      <td className="px-6 py-8 text-sm text-slate-400" colSpan={8}>
+                      <td className="px-6 py-8 text-sm text-slate-400" colSpan={10}>
                         <AppLoadingState
                           compact
                           subtitle="Ro'yxat backenddan olinmoqda."
@@ -1446,7 +1452,7 @@ export default function HujjatlarPage() {
                   )}
                   {!isDocumentsLoading && filteredDocuments.length === 0 && (
                     <tr>
-                      <td className="px-6 py-10 text-center text-sm text-slate-400" colSpan={8}>
+                      <td className="px-6 py-10 text-center text-sm text-slate-400" colSpan={10}>
                         <div className="flex flex-col items-center gap-2">
                           <span className="material-symbols-outlined text-4xl text-slate-200">inbox</span>
                           <p>{searchQuery.trim() || selectedNormativeTypeFilter ? "Mos hujjat topilmadi." : "Hozircha saqlangan hujjatlar yo'q."}</p>
@@ -1461,6 +1467,9 @@ export default function HujjatlarPage() {
                         className: "bg-slate-100 text-slate-600",
                       };
                       const docCalcAmount = calcDocAmount(doc.normative_type, doc.complexity_level, doc.document_category, Number(doc.total_pages), doc.is_research_required);
+                      // 2026-yil = rejalashtirilgan; 2027-yil = umumiy - 2026 - 01.01.2026(bajarilgan)
+                      const amount2026 = toNumber(doc.planned_amount);
+                      const amount2027 = Math.max(0, docCalcAmount - amount2026 - toNumber(doc.completed_amount));
                       const isHighAmount = docCalcAmount > HIGH_AMOUNT_THRESHOLD;
                       const isEven = index % 2 === 0;
                       return (
@@ -1551,6 +1560,18 @@ export default function HujjatlarPage() {
                           <td className="px-5 py-3.5 text-right">
                             <p className="text-sm font-semibold tabular-nums text-slate-900 whitespace-nowrap">
                               {formatMoney(docCalcAmount)}
+                            </p>
+                            <p className="text-[11px] text-slate-400">UZS</p>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <p className="text-sm font-medium tabular-nums text-slate-700 whitespace-nowrap">
+                              {formatMoney(amount2026)}
+                            </p>
+                            <p className="text-[11px] text-slate-400">UZS</p>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <p className="text-sm font-medium tabular-nums text-slate-700 whitespace-nowrap">
+                              {formatMoney(amount2027)}
                             </p>
                             <p className="text-[11px] text-slate-400">UZS</p>
                           </td>
