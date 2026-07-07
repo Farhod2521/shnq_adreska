@@ -141,13 +141,13 @@ class DocumentCalculation(models.Model):
     )
     completed_amount = models.DecimalField(
         max_digits=18,
-        decimal_places=2,
+        decimal_places=3,  # Sheets ming so'mda 3 kasr xona (×1000 aniqligini saqlash uchun)
         default=0,
         verbose_name="01.01.2026 holatiga bajarilgan",
     )
     planned_amount = models.DecimalField(
         max_digits=18,
-        decimal_places=2,
+        decimal_places=3,  # Sheets ming so'mda 3 kasr xona (×1000 aniqligini saqlash uchun)
         default=0,
         verbose_name="2026-yilga rejalashtirilgan",
     )

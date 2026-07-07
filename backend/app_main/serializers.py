@@ -106,11 +106,12 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
         max_digits=10, decimal_places=2, required=False, default="0.00"
     )
     # default yo'q — yuborilmasa Sheets'dan kelgan qiymat saqlanib qoladi (2026/2027 hisobi uchun muhim)
+    # decimal_places=3 — ming so'mdagi qiymatlar ×1000 aniqligini saqlash uchun
     completed_amount = serializers.DecimalField(
-        max_digits=18, decimal_places=2, required=False
+        max_digits=18, decimal_places=3, required=False
     )
     planned_amount = serializers.DecimalField(
-        max_digits=18, decimal_places=2, required=False
+        max_digits=18, decimal_places=3, required=False
     )
     stage1_start = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")
     stage1_end = serializers.CharField(max_length=100, required=False, allow_blank=True, default="")

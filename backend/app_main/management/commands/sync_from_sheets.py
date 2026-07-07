@@ -59,8 +59,11 @@ NAME_PREFIX_TYPE = [
 SKIP_NAMES = {"jami", "hammasi", "тaqsimlanmagan limit"}
 
 
-def _dec(value, default=Decimal("0.00")):
-    """Russian number format → Decimal: '2 170 613,760' → Decimal('2170613.76')"""
+def _dec(value, default=Decimal("0.00"), places="0.01"):
+    """Russian number format → Decimal: '2 170 613,945' → Decimal('2170613.95').
+
+    places="0.001" — ming so'mdagi summalar uchun (×1000 aniqligini saqlash).
+    """
     if value is None or str(value).strip() in ("", "-", "#REF!"):
         return default
     cleaned = (
@@ -71,7 +74,7 @@ def _dec(value, default=Decimal("0.00")):
         .replace(",", ".")
     )
     try:
-        return Decimal(cleaned).quantize(Decimal("0.01"))
+        return Decimal(cleaned).quantize(Decimal(places))
     except (InvalidOperation, TypeError, ValueError):
         return default
 
@@ -237,8 +240,9 @@ class Command(BaseCommand):
                 "complexity_level": complexity_level,
                 "total_pages": total_pages,
                 "final_total_amount": _dec(row[3]),
-                "completed_amount": _dec(row[4]),
-                "planned_amount": _dec(row[5]),
+                # 3 kasr xona — ming so'mdagi qiymat ×1000 qilinganda aniqlik yo'qolmasligi uchun
+                "completed_amount": _dec(row[4], places="0.001"),
+                "planned_amount": _dec(row[5], places="0.001"),
                 "development_deadline": deadline,
                 "executor_organization": _str(row[7]),
                 "notes": _str(row[8]),
