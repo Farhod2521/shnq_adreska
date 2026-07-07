@@ -819,7 +819,7 @@ def _append_koeffitsient_appendix(docx_doc, doc):
 
     Ushbu hujjat uchun tanlangan koeffitsient (turi × toifa × ish turi) ajratib ko'rsatiladi.
     """
-    from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
     from docx.shared import Pt, RGBColor
@@ -869,10 +869,19 @@ def _append_koeffitsient_appendix(docx_doc, doc):
     sel_level = str(doc.complexity_level)
     sel_col = _category_column_index(doc.document_category)  # 0/1/2 yoki None
 
-    # --- Sahifa uzilishi + sarlavha (yo'riqnomaga 1-ILOVA) ---
-    br = docx_doc.add_paragraph()
-    br.add_run().add_break(WD_BREAK.PAGE)
+    # Jadval "Nb – ... qiymat (N);" qatoridan keyin joylashadi (o'sha qiymat qayerdan
+    # kelganini ko'rsatuvchi javob). Ankor sifatida Nb paragrafini topamiz.
+    anchor = None
+    for p in docx_doc.paragraphs:
+        t = p.text.strip()
+        if t.startswith("Nb ") and ("qiymat" in t or "me'yorlariga" in t):
+            anchor = p._p
+            break
 
+    body = docx_doc.element.body
+    before_ids = {id(el) for el in body}
+
+    # --- Sarlavha (yo'riqnomaga 1-ILOVA) ---
     title_lines = [
         ("Qurilish va uy-joy kommunal xoʻjaligi sohasidagi", False),
         ("normativ hujjatlarni ishlab chiqish qiymatini aniqlash", False),
@@ -947,6 +956,14 @@ def _append_koeffitsient_appendix(docx_doc, doc):
         r.italic = True
         r.font.name = FONT
         r.font.size = Pt(9)
+
+    # --- Yangi qo'shilgan elementlarni Nb qatoridan keyinga ko'chiramiz ---
+    if anchor is not None:
+        new_elems = [el for el in list(body) if id(el) not in before_ids]
+        ref = anchor
+        for el in new_elems:
+            ref.addnext(el)  # lxml elementni ko'chiradi (nusxa emas)
+            ref = el
 
 
 class DocumentContractAPIView(APIView):
