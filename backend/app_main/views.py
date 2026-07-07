@@ -667,8 +667,15 @@ def _make_run(p_elem, text: str, template_rpr, bold: bool):
     p_elem.append(r_elem)
 
 
+def _is_image_run(run) -> bool:
+    """Run rasm (muhr/QR) yoki grafik saqlaydimi?"""
+    from docx.oxml.ns import qn
+
+    return run._r.find(qn("w:drawing")) is not None or run._r.find(qn("w:pict")) is not None
+
+
 def _fill_paragraph(para, placeholders: dict):
-    """Paragraph ichidagi placeholder'larni to'ldiradi."""
+    """Paragraph ichidagi placeholder'larni to'ldiradi (rasm/muhr run'larini saqlaydi)."""
     from docx.oxml.ns import qn
 
     full_text = "".join(run.text for run in para.runs)
@@ -677,22 +684,30 @@ def _fill_paragraph(para, placeholders: dict):
 
     has_bold = any(f"{{{{{k}}}}}" in full_text for k in BOLD_PLACEHOLDERS)
 
-    # Bold kerak bo'lmasa — oddiy almashtirish
+    # Bold kerak bo'lmasa — oddiy almashtirish (rasm run'lariga tegmaymiz)
     if not has_bold:
         for key, value in placeholders.items():
             full_text = full_text.replace(f"{{{{{key}}}}}", str(value))
-        for i, run in enumerate(para.runs):
-            run.text = full_text if i == 0 else ""
+        assigned = False
+        for run in para.runs:
+            if _is_image_run(run):
+                continue
+            run.text = full_text if not assigned else ""
+            assigned = True
         return
 
-    # Bold kerak: run'larni bo'lib qayta yaratamiz
+    # Bold kerak: matn run'larini bo'lib qayta yaratamiz, rasm run'larini saqlaymiz
     template_rpr = None
-    if para.runs:
-        template_rpr = para.runs[0]._r.find(qn("w:rPr"))
+    for run in para.runs:
+        if not _is_image_run(run):
+            template_rpr = run._r.find(qn("w:rPr"))
+            break
 
-    # Barcha run'larni o'chirish
+    # Faqat matn run'larini o'chirish (rasm/muhr o'z joyida qoladi)
     p_elem = para._p
     for run in list(para.runs):
+        if _is_image_run(run):
+            continue
         p_elem.remove(run._r)
 
     # placeholder'larni non-bold bilan almashtir, bold'larni saqla
