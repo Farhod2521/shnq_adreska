@@ -1077,7 +1077,39 @@ class DocumentContractAPIView(APIView):
         )
 
     def post_process_docx(self, docx_doc, doc):
-        """Sub-view'lar hujjatga qo'shimcha element qo'shishi uchun (default: hech narsa)."""
+        """Sub-view'lar hujjatga qo'shimcha element qo'shishi uchun.
+
+        Shartnoma uchun: 2027 summasiga qarab "Shundan..." jumlasi va 1.3-band muddati.
+        """
+        if self.TEMPLATE_NAME != "shartnoma.docx":
+            return None
+
+        scale = Decimal("1000")
+        amount_2026 = (doc.planned_amount or Decimal("0")) * scale
+        completed_2025 = (doc.completed_amount or Decimal("0")) * scale
+        amount_2027 = doc.final_total_amount - amount_2026 - completed_2025
+
+        if amount_2027 <= 0:
+            # 2027 uchun summa yo'q → "Shundan 2026-yilga ..." jumlasini olib tashlaymiz
+            for p in docx_doc.paragraphs:
+                if p.text.strip().startswith("Shundan 2026-yilga"):
+                    p._p.getparent().remove(p._p)
+                    break
+        else:
+            # 2027 uchun summa bor → 1.3-band muddati 2026-yil → 2027-yil 31-dekabrgacha
+            for p in docx_doc.paragraphs:
+                if "31-dekabrgacha" not in p.text:
+                    continue
+                runs = p.runs
+                anchor_i = next(
+                    (i for i, r in enumerate(runs) if "-yil" in r.text and "dekabr" in r.text),
+                    None,
+                )
+                if anchor_i and anchor_i > 0:
+                    prev = runs[anchor_i - 1]
+                    if prev.text.endswith("6"):  # yil oxirgi raqami: ...2026 → ...2027
+                        prev.text = prev.text[:-1] + "7"
+                break
         return None
 
 
