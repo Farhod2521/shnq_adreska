@@ -46,6 +46,16 @@ TYPE_MAP = {
 
 KNOWN_TYPES = set(TYPE_MAP.keys())
 
+# Hujjat nomi prefiksi → normativ_type (Sheets ustunidagi harf noto'g'ri bo'lganda
+# nom bo'yicha aniqlanadi). Ketma-ketlik muhim — birinchi mos kelgan olinadi.
+NAME_PREFIX_TYPE = [
+    ("SRN", "srn"),
+    ("MQN", "mqn"),
+    ("SHNQ", "shnq"),
+    ("SHNK", "shnq"),
+    ("QR", "qr"),
+]
+
 SKIP_NAMES = {"jami", "hammasi", "тaqsimlanmagan limit"}
 
 
@@ -193,10 +203,13 @@ class Command(BaseCommand):
             col_l = _str(row[11])
 
             normative_type = TYPE_MAP.get(col_n, "shnq")
-            # Hujjat nomi "SRN" bilan boshlansa — turini SRN qilib belgilaymiz
-            # (Sheets'dagi harf ba'zan "standard" deb noto'g'ri belgilangan)
-            if col_c.upper().lstrip().startswith("SRN"):
-                normative_type = "srn"
+            # Hujjat nomi prefiksiga qarab turni aniqlaymiz — Sheets'dagi harf
+            # ba'zan noto'g'ri belgilangan (masalan MQN "shnq", SRN "standard" bo'lib ketgan).
+            name_upper = col_c.upper().lstrip()
+            for prefix, ntype in NAME_PREFIX_TYPE:
+                if name_upper.startswith(prefix):
+                    normative_type = ntype
+                    break
             document_category = STATUS_MAP.get(col_k, DocumentCalculation.DocumentCategory.NEW)
 
             try:
