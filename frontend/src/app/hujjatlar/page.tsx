@@ -204,6 +204,7 @@ type DocumentCalculationItem = {
   selected_base_coefficient: string;
   selected_complexity_coefficient: string;
   final_total_amount: string;
+  sheet_total_amount?: string;
   completed_amount: string;
   planned_amount: string;
   stage1_start: string;
@@ -350,6 +351,30 @@ const toNumber = (value: string | number | null | undefined): number => {
   if (value === null || value === undefined) return 0;
   const parsed = Number(String(value).replace(",", "."));
   return Number.isFinite(parsed) ? parsed : 0;
+};
+
+// Umumiy narx: MQN va Eurocode uchun formula emas — Excel qiymati (ming so'm × 1000);
+// qolgan turlar uchun formula (VHM × sahifa × BHM × ...).
+const SHEET_TOTAL_TYPES = ["mqn", "eurocode"];
+type DocAmountInput = {
+  normative_type: string;
+  complexity_level: ComplexityLevel;
+  document_category: DocumentCategory;
+  total_pages: number | string;
+  is_research_required: boolean;
+  sheet_total_amount?: string | number;
+};
+const getDocAmount = (doc: DocAmountInput): number => {
+  if (SHEET_TOTAL_TYPES.includes(doc.normative_type)) {
+    return toNumber(doc.sheet_total_amount) * 1000;
+  }
+  return calcDocAmount(
+    doc.normative_type,
+    doc.complexity_level,
+    doc.document_category,
+    Number(doc.total_pages),
+    doc.is_research_required,
+  );
 };
 
 const formatMoney = (value: number): string =>
@@ -1246,8 +1271,8 @@ export default function HujjatlarPage() {
         aVal = Number(a.total_pages);
         bVal = Number(b.total_pages);
       } else {
-        aVal = calcDocAmount(a.normative_type, a.complexity_level, a.document_category, Number(a.total_pages), a.is_research_required);
-        bVal = calcDocAmount(b.normative_type, b.complexity_level, b.document_category, Number(b.total_pages), b.is_research_required);
+        aVal = getDocAmount(a);
+        bVal = getDocAmount(b);
       }
       if (aVal < bVal) return sortDir === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDir === "asc" ? 1 : -1;
@@ -1480,7 +1505,7 @@ export default function HujjatlarPage() {
                         label: doc.complexity_level,
                         className: "bg-slate-100 text-slate-600",
                       };
-                      const docCalcAmount = calcDocAmount(doc.normative_type, doc.complexity_level, doc.document_category, Number(doc.total_pages), doc.is_research_required);
+                      const docCalcAmount = getDocAmount(doc);
                       // 2026-yil = rejalashtirilgan; 2027-yil = umumiy - 2026 - 01.01.2026(bajarilgan)
                       // Sheets summalari ming so'mda — umumiy so'mda bo'lgani uchun ×1000
                       const SHEET_SCALE = 1000;
@@ -2752,15 +2777,7 @@ export default function HujjatlarPage() {
                               Yakuniy hisoblangan summa
                             </td>
                             <td className="border border-slate-300 p-4 text-right text-base text-primary tabular-nums font-bold">
-                              {selectedDocument
-                                ? formatMoney(calcDocAmount(
-                                    selectedDocument.normative_type,
-                                    selectedDocument.complexity_level,
-                                    selectedDocument.document_category,
-                                    Number(selectedDocument.total_pages),
-                                    selectedDocument.is_research_required,
-                                  ))
-                                : "—"}
+                              {selectedDocument ? formatMoney(getDocAmount(selectedDocument)) : "—"}
                             </td>
                           </tr>
                         </tbody>

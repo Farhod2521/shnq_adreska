@@ -65,6 +65,7 @@ class DocumentCalculationSerializer(serializers.ModelSerializer):
             "selected_base_coefficient",
             "selected_complexity_coefficient",
             "final_total_amount",
+            "sheet_total_amount",
             "completed_amount",
             "planned_amount",
             "stage1_start",
@@ -107,6 +108,9 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
     )
     # default yo'q — yuborilmasa Sheets'dan kelgan qiymat saqlanib qoladi (2026/2027 hisobi uchun muhim)
     # decimal_places=3 — ming so'mdagi qiymatlar ×1000 aniqligini saqlash uchun
+    sheet_total_amount = serializers.DecimalField(
+        max_digits=18, decimal_places=3, required=False
+    )
     completed_amount = serializers.DecimalField(
         max_digits=18, decimal_places=3, required=False
     )

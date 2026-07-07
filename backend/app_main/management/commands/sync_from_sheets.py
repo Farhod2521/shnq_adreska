@@ -240,6 +240,8 @@ class Command(BaseCommand):
                 "complexity_level": complexity_level,
                 "total_pages": total_pages,
                 "final_total_amount": _dec(row[3]),
+                # Excel umumiy narxi (ming so'm) — MQN/Eurocode uchun formula o'rniga
+                "sheet_total_amount": _dec(row[3], places="0.001"),
                 # 3 kasr xona — ming so'mdagi qiymat ×1000 qilinganda aniqlik yo'qolmasligi uchun
                 "completed_amount": _dec(row[4], places="0.001"),
                 "planned_amount": _dec(row[5], places="0.001"),
@@ -290,6 +292,7 @@ class Command(BaseCommand):
                     complexity_level=rec["complexity_level"],
                     total_pages=rec["total_pages"],
                     final_total_amount=rec["final_total_amount"],
+                    sheet_total_amount=rec["sheet_total_amount"],
                     completed_amount=rec["completed_amount"],
                     planned_amount=rec["planned_amount"],
                     development_deadline=rec["development_deadline"],

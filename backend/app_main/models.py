@@ -139,6 +139,13 @@ class DocumentCalculation(models.Model):
         default=0,
         verbose_name="Yakuniy hisoblangan summa",
     )
+    # Excel'dagi umumiy narx (ming so'mda) — MQN/Eurocode uchun formula o'rniga ishlatiladi
+    sheet_total_amount = models.DecimalField(
+        max_digits=18,
+        decimal_places=3,
+        default=0,
+        verbose_name="Excel umumiy narxi (ming so'm)",
+    )
     completed_amount = models.DecimalField(
         max_digits=18,
         decimal_places=3,  # Sheets ming so'mda 3 kasr xona (×1000 aniqligini saqlash uchun)
@@ -236,8 +243,21 @@ class DocumentCalculation(models.Model):
         )
         self.selected_complexity_coefficient = Decimal("1.00")
 
+    # Umumiy narxi formula bilan emas, Excel'dan to'g'ridan-to'g'ri olinadigan turlar
+    SHEET_TOTAL_TYPES = ("mqn", "eurocode")
+
     def recalculate_final_total_amount(self) -> Decimal:
-        """Formula: VHM × sahifalar_soni × BHM(412_000) × 2.1 × 1.12 [× 1.4 agar ilmiy tadqiqot talab etilsa]"""
+        """Formula: VHM × sahifalar_soni × BHM(412_000) × 2.1 × 1.12 [× 1.4 agar ilmiy tadqiqot talab etilsa]
+
+        MQN va Eurocode uchun formula boshqacha — umumiy narx Excel'dagi qiymatdan olinadi
+        (Sheets ming so'mda saqlaydi → so'mga o'tkazish uchun ×1000).
+        """
+        if self.normative_type in self.SHEET_TOTAL_TYPES:
+            self.final_total_amount = (
+                (self.sheet_total_amount or Decimal("0")) * Decimal("1000")
+            ).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            return self.final_total_amount
+
         if self.selected_base_coefficient <= 0 or self.total_pages <= 0:
             self.final_total_amount = Decimal("0.00")
             return self.final_total_amount
