@@ -731,8 +731,12 @@ def _fill_paragraph(para, placeholders: dict):
         _make_run(p_elem, text, template_rpr, bold=is_bold_part)
 
 
-def _fill_docx(template_path: str, placeholders: dict) -> io.BytesIO:
-    """Shablon Word faylni to'ldiradi va BytesIO qaytaradi."""
+def _fill_docx(template_path: str, placeholders: dict, post_process=None) -> io.BytesIO:
+    """Shablon Word faylni to'ldiradi va BytesIO qaytaradi.
+
+    post_process(docx_doc) — saqlashdan oldin hujjatga qo'shimcha o'zgartirish
+    (masalan Kalkulatsiya uchun 1-ilova jadvalini qo'shish) kiritish uchun.
+    """
     doc = DocxDocument(template_path)
     for para in doc.paragraphs:
         _fill_paragraph(para, placeholders)
@@ -741,10 +745,163 @@ def _fill_docx(template_path: str, placeholders: dict) -> io.BytesIO:
             for cell in row.cells:
                 for para in cell.paragraphs:
                     _fill_paragraph(para, placeholders)
+    if post_process is not None:
+        post_process(doc)
     buf = io.BytesIO()
     doc.save(buf)
     buf.seek(0)
     return buf
+
+
+# 12-jadval (VHM/sahifa koeffitsienti) — Kalkulatsiya 1-ilovasi uchun.
+# Har bir tuple: (Yangi, Qayta, O'zgartirish)  [I/II/III toifa]
+_TABLE_12 = {
+    "technical_regulation": {"1": (15, 8, 3), "2": (28, 14, 5), "3": (43, 22, 7)},
+    "shnq": {"1": (14, 7, 2), "2": (26, 13, 4), "3": (40, 20, 7)},
+    "eurocode": {"1": (13, 7, 2), "2": (24, 12, 4), "3": (37, 19, 6)},
+    "nizom": {"1": (12, 6, 2), "2": (23, 12, 4), "3": (34, 17, 6)},
+    "standard": {"1": (11, 6, 2), "2": (21, 11, 4), "3": (32, 16, 5)},
+    "methodical_guide": {"1": (10, 5, 2), "2": (19, 10, 3), "3": (29, 15, 5)},
+}
+
+# (label, mos_normativ_turlar, TABLE_12_kaliti)
+_JADVAL_12_GROUPS = [
+    ("Texnik reglament", ["technical_regulation"], "technical_regulation"),
+    ("Shaharsozlik normalari va qoidalari, Milliy qurilish normalari", ["shnq", "mqn"], "shnq"),
+    ("Xalqaro yoki xorijiy normalar", ["eurocode"], "eurocode"),
+    ("Qurilishda qo'llaniladigan nizom, qoida, yo'riqnoma, tartib va sh.k.", ["nizom"], "nizom"),
+    ("Standartlar, Idoraviy qurilish normalari, smeta-resurs normalari", ["standard", "srn", "qr"], "standard"),
+    ("Qo'llanma, ma'lumotnoma, boshqa majburiy bo'lmagan hujjatlar", ["methodical_guide"], "methodical_guide"),
+]
+
+_LEVEL_ROMAN = {"1": "I", "2": "II", "3": "III"}
+
+
+def _category_column_index(document_category: str):
+    """Hujjat toifasi → jadval ustuni (0=Yangi, 1=Qayta, 2=O'zgartirish)."""
+    if document_category == "new":
+        return 0
+    if document_category in ("rework_harmonization", "rework_modification"):
+        return 1
+    if document_category == "additional_change":
+        return 2
+    return None
+
+
+def _append_koeffitsient_appendix(docx_doc, doc):
+    """Kalkulatsiya hujjati oxiriga 12-jadvalni (1-ilova) qo'shadi.
+
+    Ushbu hujjat uchun tanlangan koeffitsient (turi × toifa × ish turi) ajratib ko'rsatiladi.
+    """
+    from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+    from docx.shared import Pt, RGBColor
+
+    FONT = "Times New Roman"
+    LIGHT = "EDEDF7"   # tanlangan guruh — ochiq lavanda
+    DARK = "1A227F"    # aynan tanlangan katak — to'q ko'k
+
+    def shade(cell, fill_hex):
+        tcPr = cell._tc.get_or_add_tcPr()
+        for existing in tcPr.findall(qn("w:shd")):  # eski shading'ni almashtiramiz
+            tcPr.remove(existing)
+        shd = OxmlElement("w:shd")
+        shd.set(qn("w:val"), "clear")
+        shd.set(qn("w:fill"), fill_hex)
+        tcPr.append(shd)
+
+    def set_cell(cell, text, *, bold=False, color=None, align="left", size=8):
+        cell.text = ""
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if align == "center" else WD_ALIGN_PARAGRAPH.LEFT
+        run = p.add_run(text)
+        run.bold = bold
+        run.font.size = Pt(size)
+        run.font.name = FONT
+        if color:
+            run.font.color.rgb = RGBColor.from_string(color)
+
+    # Tanlangan pozitsiya
+    sel_group = next(
+        (i for i, (_, types, _) in enumerate(_JADVAL_12_GROUPS) if doc.normative_type in types),
+        None,
+    )
+    sel_level = str(doc.complexity_level)
+    sel_col = _category_column_index(doc.document_category)  # 0/1/2 yoki None
+
+    # --- Sahifa uzilishi + sarlavha ---
+    br = docx_doc.add_paragraph()
+    br.add_run().add_break(WD_BREAK.PAGE)
+
+    p_ilova = docx_doc.add_paragraph()
+    p_ilova.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    r = p_ilova.add_run("1-ilova")
+    r.bold = True
+    r.italic = True
+    r.font.name = FONT
+    r.font.size = Pt(11)
+
+    p_title = docx_doc.add_paragraph()
+    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p_title.add_run("VHM/sahifa koeffitsienti (12-jadval)")
+    r.bold = True
+    r.font.name = FONT
+    r.font.size = Pt(12)
+
+    # --- Jadval ---
+    headers = ["Hujjat turi", "Toifa", "Yangi", "Qayta", "O'zgartirish"]
+    table = docx_doc.add_table(rows=1, cols=len(headers))
+    table.style = "Table Grid"
+    for ci, htext in enumerate(headers):
+        set_cell(table.rows[0].cells[ci], htext, bold=True, align="center", size=9)
+        shade(table.rows[0].cells[ci], "D9D9E8")
+
+    for gi, (label, _types, tkey) in enumerate(_JADVAL_12_GROUPS):
+        first_row_cells = None
+        group_rows = []
+        for level in ("1", "2", "3"):
+            row = table.add_row()
+            group_rows.append(row)
+            cells = row.cells
+            if first_row_cells is None:
+                first_row_cells = cells
+            values = _TABLE_12[tkey][level]  # (Yangi, Qayta, O'zgartirish)
+            # ustun 0 — nom (keyin vertikal birlashtiramiz)
+            set_cell(cells[0], label if level == "1" else "", size=8)
+            set_cell(cells[1], _LEVEL_ROMAN[level], align="center", size=8)
+            for k in range(3):
+                set_cell(cells[2 + k], str(values[k]), align="center", size=8)
+
+            is_sel_group = gi == sel_group
+            if is_sel_group:
+                for c in cells:
+                    shade(c, LIGHT)
+                # aynan tanlangan katak
+                if sel_col is not None and level == sel_level:
+                    target = cells[2 + sel_col]
+                    shade(target, DARK)
+                    set_cell(target, str(values[sel_col]), bold=True, color="FFFFFF", align="center", size=9)
+
+        # nom ustunini (0) 3 qatorga birlashtirish
+        merged = first_row_cells[0]
+        for r2 in group_rows[1:]:
+            merged = merged.merge(r2.cells[0])
+        merged.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # --- Tanlov izohi ---
+    if sel_group is not None and sel_col is not None:
+        cat_name = {0: "Yangi", 1: "Qayta", 2: "O'zgartirish"}[sel_col]
+        note = docx_doc.add_paragraph()
+        note.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        r = note.add_run(
+            f"Ushbu normativ hujjat uchun tanlangan: "
+            f"{_JADVAL_12_GROUPS[sel_group][0]} — {_LEVEL_ROMAN[sel_level]}-toifa — {cat_name} = "
+            f"{_TABLE_12[_JADVAL_12_GROUPS[sel_group][2]][sel_level][sel_col]} VHM/sahifa."
+        )
+        r.italic = True
+        r.font.name = FONT
+        r.font.size = Pt(9)
 
 
 class DocumentContractAPIView(APIView):
@@ -839,7 +996,11 @@ class DocumentContractAPIView(APIView):
             "IV_summa": _fmt_money(doc.stage4_amount),
         }
 
-        buf = _fill_docx(template_path, placeholders)
+        buf = _fill_docx(
+            template_path,
+            placeholders,
+            post_process=lambda docx_doc: self.post_process_docx(docx_doc, doc),
+        )
         encoded = base64.b64encode(buf.read()).decode("utf-8")
 
         return Response(
@@ -850,6 +1011,10 @@ class DocumentContractAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+    def post_process_docx(self, docx_doc, doc):
+        """Sub-view'lar hujjatga qo'shimcha element qo'shishi uchun (default: hech narsa)."""
+        return None
 
 
 class DocumentKalendarRejaAPIView(DocumentContractAPIView):
@@ -898,6 +1063,10 @@ class DocumentKalkulatsiyaAPIView(DocumentContractAPIView):
         if response.status_code == 200:
             response.data["filename"] = f"kalkulatsiya_{pk}.docx"
         return response
+
+    def post_process_docx(self, docx_doc, doc):
+        # Kalkulatsiya oxiriga 12-jadvalni (1-ilova) tanlangan koeffitsient ajratilgan holda qo'shamiz
+        _append_koeffitsient_appendix(docx_doc, doc)
 
 
 class SyncFromSheetsAPIView(APIView):
