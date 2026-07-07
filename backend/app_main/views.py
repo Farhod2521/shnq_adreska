@@ -788,6 +788,16 @@ def _category_column_index(document_category: str):
     return None
 
 
+def _selected_vhm(doc):
+    """Hujjat uchun tanlangan VHM/sahifa koeffitsienti (12-jadvaldan) — masalan 14."""
+    group = next((g for g in _JADVAL_12_GROUPS if doc.normative_type in g[1]), None)
+    col = _category_column_index(doc.document_category)
+    level = str(doc.complexity_level)
+    if group is None or col is None or level not in _TABLE_12.get(group[2], {}):
+        return None
+    return _TABLE_12[group[2]][level][col]
+
+
 def _append_koeffitsient_appendix(docx_doc, doc):
     """Kalkulatsiya hujjati oxiriga 12-jadvalni (1-ilova) qo'shadi.
 
@@ -843,24 +853,23 @@ def _append_koeffitsient_appendix(docx_doc, doc):
     sel_level = str(doc.complexity_level)
     sel_col = _category_column_index(doc.document_category)  # 0/1/2 yoki None
 
-    # --- Sahifa uzilishi + sarlavha ---
+    # --- Sahifa uzilishi + sarlavha (yo'riqnomaga 1-ILOVA) ---
     br = docx_doc.add_paragraph()
     br.add_run().add_break(WD_BREAK.PAGE)
 
-    p_ilova = docx_doc.add_paragraph()
-    p_ilova.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    r = p_ilova.add_run("1-ilova")
-    r.bold = True
-    r.italic = True
-    r.font.name = FONT
-    r.font.size = Pt(11)
-
-    p_title = docx_doc.add_paragraph()
-    p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r = p_title.add_run("VHM/sahifa koeffitsienti (12-jadval)")
-    r.bold = True
-    r.font.name = FONT
-    r.font.size = Pt(12)
+    title_lines = [
+        ("Qurilish va uy-joy kommunal xoʻjaligi sohasidagi", False),
+        ("normativ hujjatlarni ishlab chiqish qiymatini aniqlash", False),
+        ("boʻyicha yo‘riqnomaga", False),
+        ("1-ILOVA", True),
+    ]
+    for text, bold in title_lines:
+        p_line = docx_doc.add_paragraph()
+        p_line.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        r = p_line.add_run(text)
+        r.bold = bold
+        r.font.name = FONT
+        r.font.size = Pt(12 if bold else 11)
 
     # --- Jadval ---
     headers = ["Hujjat turi", "Toifa", "Yangi", "Qayta", "O'zgartirish"]
@@ -972,6 +981,8 @@ class DocumentContractAPIView(APIView):
             "document_category_label": doc.get_document_category_display(),
             "sources_count": str(doc.sources_count),
             "research_status": "Ha" if doc.is_research_required else "Yo'q",
+            # Nb izohi uchun — 12-jadvaldan tanlangan VHM/sahifa koeffitsienti (masalan 14)
+            "vhm_value": str(_selected_vhm(doc) if _selected_vhm(doc) is not None else ""),
             "executor_organization": doc.executor_organization or "",
             "development_deadline": doc.development_deadline or "",
             "shartnoma_number": doc.contract_number or f"{doc.id}/26",
