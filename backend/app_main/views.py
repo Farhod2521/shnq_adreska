@@ -878,8 +878,7 @@ def _append_koeffitsient_appendix(docx_doc, doc):
             anchor = p._p
             break
 
-    body = docx_doc.element.body
-    before_ids = {id(el) for el in body}
+    created = []  # yangi qo'shilgan elementlar (keyin Nb tagiga ko'chiramiz)
 
     # --- Sarlavha (yo'riqnomaga 1-ILOVA) ---
     title_lines = [
@@ -895,10 +894,12 @@ def _append_koeffitsient_appendix(docx_doc, doc):
         r.bold = bold
         r.font.name = FONT
         r.font.size = Pt(12 if bold else 11)
+        created.append(p_line._p)
 
     # --- Jadval ---
     headers = ["Hujjat turi", "Toifa", "Yangi", "Qayta", "O'zgartirish"]
     table = docx_doc.add_table(rows=1, cols=len(headers))
+    created.append(table._tbl)
     set_borders(table)
     for ci, htext in enumerate(headers):
         set_cell(table.rows[0].cells[ci], htext, bold=True, align="center", size=9)
@@ -956,12 +957,12 @@ def _append_koeffitsient_appendix(docx_doc, doc):
         r.italic = True
         r.font.name = FONT
         r.font.size = Pt(9)
+        created.append(note._p)
 
     # --- Yangi qo'shilgan elementlarni Nb qatoridan keyinga ko'chiramiz ---
     if anchor is not None:
-        new_elems = [el for el in list(body) if id(el) not in before_ids]
         ref = anchor
-        for el in new_elems:
+        for el in created:
             ref.addnext(el)  # lxml elementni ko'chiradi (nusxa emas)
             ref = el
 
