@@ -1468,8 +1468,10 @@ export default function HujjatlarPage() {
                       };
                       const docCalcAmount = calcDocAmount(doc.normative_type, doc.complexity_level, doc.document_category, Number(doc.total_pages), doc.is_research_required);
                       // 2026-yil = rejalashtirilgan; 2027-yil = umumiy - 2026 - 01.01.2026(bajarilgan)
-                      const amount2026 = toNumber(doc.planned_amount);
-                      const amount2027 = Math.max(0, docCalcAmount - amount2026 - toNumber(doc.completed_amount));
+                      // Sheets summalari ming so'mda — umumiy so'mda bo'lgani uchun ×1000
+                      const SHEET_SCALE = 1000;
+                      const amount2026 = toNumber(doc.planned_amount) * SHEET_SCALE;
+                      const amount2027 = Math.max(0, docCalcAmount - amount2026 - toNumber(doc.completed_amount) * SHEET_SCALE);
                       const isHighAmount = docCalcAmount > HIGH_AMOUNT_THRESHOLD;
                       const isEven = index % 2 === 0;
                       return (

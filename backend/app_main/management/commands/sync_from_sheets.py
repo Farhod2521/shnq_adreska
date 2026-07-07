@@ -13,6 +13,8 @@ from decimal import Decimal, InvalidOperation
 import gspread
 from django.conf import settings
 from django.core.management.base import BaseCommand
+from django.core.management.color import no_style
+from django.db import connection
 from google.oauth2.service_account import Credentials
 
 from app_main.models import DocumentCalculation, DocumentCalculationCategory
@@ -235,6 +237,17 @@ class Command(BaseCommand):
         self.stdout.write("Eski ma'lumotlar o'chirilmoqda...")
         deleted_count, _ = DocumentCalculation.objects.all().delete()
         self.stdout.write(f"  {deleted_count} ta yozuv o'chirildi.")
+
+        # ID (id) ketma-ketligini 1 dan boshlash — shartnoma raqami id/26 bo'lgani uchun
+        try:
+            reset_sql = connection.ops.sequence_reset_sql(no_style(), [DocumentCalculation])
+            with connection.cursor() as cursor:
+                for sql in reset_sql:
+                    cursor.execute(sql)
+            if reset_sql:
+                self.stdout.write("  ID ketma-ketligi 1 dan boshlanadi.")
+        except Exception as exc:  # noqa: BLE001
+            self.stderr.write(f"  ID ketma-ketligini tiklashda ogohlantirish: {exc}")
 
         self.stdout.write("Yangi ma'lumotlar yozilmoqda...")
         created = 0

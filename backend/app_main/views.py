@@ -780,8 +780,10 @@ class DocumentContractAPIView(APIView):
         #   2026-yilga = planned_amount (2026-yilga rejalashtirilgan)
         #   2027-yil uchun = umumiy - 2026 - 01.01.2026 holatiga bajarilgan (completed_amount)
         # 01.01.2026 holatidagi summa 2025-yil uchun bajarilgan hisoblanadi.
-        amount_2026 = doc.planned_amount or Decimal("0.00")
-        completed_2025 = doc.completed_amount or Decimal("0.00")
+        # Sheets'da summalar ming so'mda saqlanadi — umumiy (formula) so'mda bo'lgani uchun ×1000.
+        SHEET_SCALE = Decimal("1000")
+        amount_2026 = (doc.planned_amount or Decimal("0.00")) * SHEET_SCALE
+        completed_2025 = (doc.completed_amount or Decimal("0.00")) * SHEET_SCALE
         amount_2027 = doc.final_total_amount - amount_2026 - completed_2025
         if amount_2027 < 0:
             amount_2027 = Decimal("0.00")
