@@ -800,17 +800,17 @@ def _selected_vhm(doc):
     return _TABLE_12[group[2]][level][col]
 
 
-# Normativ tur → to'liq nom (Kalkulatsiya sarlavhasi uchun)
+# Normativ tur → to'liq nom (Kalkulatsiya sarlavhasi uchun — gap o'rtasida, kichik harf bilan)
 NORMATIVE_TYPE_FULL = {
-    "shnq": "Shaharsozlik normalari va qoidalari",
-    "mqn": "Milliy qurilish normalari",
-    "standard": "Milliy standart",
-    "srn": "Smeta-resurs normalari",
-    "qr": "Idoraviy qurilish normalari",
-    "technical_regulation": "Texnik reglament",
-    "eurocode": "Xalqaro yoki xorijiy normalar",
-    "nizom": "Nizom, qoida, yo'riqnoma",
-    "methodical_guide": "Qo'llanma, ma'lumotnoma",
+    "shnq": "shaharsozlik normalari va qoidalari",
+    "mqn": "milliy qurilish normalari",
+    "standard": "milliy standart",
+    "srn": "smeta-resurs normalari",
+    "qr": "idoraviy qurilish normalari",
+    "technical_regulation": "texnik reglament",
+    "eurocode": "xalqaro yoki xorijiy normalar",
+    "nizom": "nizom, qoida, yo'riqnoma",
+    "methodical_guide": "qo'llanma, ma'lumotnoma",
 }
 
 
@@ -895,7 +895,14 @@ def _append_koeffitsient_appendix(docx_doc, doc):
         set_cell(table.rows[0].cells[ci], htext, bold=True, align="center", size=9)
         shade(table.rows[0].cells[ci], "D9D9E8")
 
-    for gi, (label, _types, tkey) in enumerate(_JADVAL_12_GROUPS):
+    # Faqat ushbu hujjatga tegishli guruhni ko'rsatamiz (tur aniqlansa);
+    # aks holda barcha guruhlar (zaxira).
+    if sel_group is not None:
+        groups_to_show = [(sel_group, _JADVAL_12_GROUPS[sel_group])]
+    else:
+        groups_to_show = list(enumerate(_JADVAL_12_GROUPS))
+
+    for gi, (label, _types, tkey) in groups_to_show:
         first_row_cells = None
         group_rows = []
         for level in ("1", "2", "3"):
