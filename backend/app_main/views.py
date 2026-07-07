@@ -811,6 +811,19 @@ def _append_koeffitsient_appendix(docx_doc, doc):
         shd.set(qn("w:fill"), fill_hex)
         tcPr.append(shd)
 
+    def set_borders(table):
+        # "Table Grid" uslubi shablonda bo'lmasligi mumkin — chegarani XML orqali qo'yamiz
+        tblPr = table._tbl.tblPr
+        borders = OxmlElement("w:tblBorders")
+        for edge in ("top", "left", "bottom", "right", "insideH", "insideV"):
+            el = OxmlElement(f"w:{edge}")
+            el.set(qn("w:val"), "single")
+            el.set(qn("w:sz"), "4")
+            el.set(qn("w:space"), "0")
+            el.set(qn("w:color"), "999999")
+            borders.append(el)
+        tblPr.append(borders)
+
     def set_cell(cell, text, *, bold=False, color=None, align="left", size=8):
         cell.text = ""
         p = cell.paragraphs[0]
@@ -852,7 +865,7 @@ def _append_koeffitsient_appendix(docx_doc, doc):
     # --- Jadval ---
     headers = ["Hujjat turi", "Toifa", "Yangi", "Qayta", "O'zgartirish"]
     table = docx_doc.add_table(rows=1, cols=len(headers))
-    table.style = "Table Grid"
+    set_borders(table)
     for ci, htext in enumerate(headers):
         set_cell(table.rows[0].cells[ci], htext, bold=True, align="center", size=9)
         shade(table.rows[0].cells[ci], "D9D9E8")
