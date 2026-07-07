@@ -769,6 +769,7 @@ class DocumentContractAPIView(APIView):
             "complexity_level": str(doc.complexity_level),
             # TZ (Texnik topshiriq) uchun — o'qiladigan ko'rinishdagi qiymatlar
             "complexity_label": doc.get_complexity_level_display(),
+            "complexity_roman": {"1": "I", "2": "II", "3": "III"}.get(str(doc.complexity_level), str(doc.complexity_level)),
             "document_category_label": doc.get_document_category_display(),
             "sources_count": str(doc.sources_count),
             "research_status": "Ha" if doc.is_research_required else "Yo'q",
@@ -852,6 +853,18 @@ class DocumentBayonnomaAPIView(DocumentContractAPIView):
         response = super().get(request, pk)
         if response.status_code == 200:
             response.data["filename"] = f"bayonnoma_{pk}.docx"
+        return response
+
+
+class DocumentKalkulatsiyaAPIView(DocumentContractAPIView):
+    """Kalkulatsiya shablonini to'ldirib base64 .docx qaytaradi."""
+
+    TEMPLATE_NAME = "Kalkul.docx"
+
+    def get(self, request, pk):
+        response = super().get(request, pk)
+        if response.status_code == 200:
+            response.data["filename"] = f"kalkulatsiya_{pk}.docx"
         return response
 
 

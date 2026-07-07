@@ -470,6 +470,14 @@ export default function HujjatlarPage() {
   const [bayonnomaDocName, setBayonnomaDocName] = useState("");
   const bayonnomaPreviewRef = useRef<HTMLDivElement>(null);
 
+  // Kalkulatsiya
+  const [isKalkulatsiyaModalOpen, setIsKalkulatsiyaModalOpen] = useState(false);
+  const [isKalkulatsiyaLoading, setIsKalkulatsiyaLoading] = useState(false);
+  const [kalkulatsiyaDocx64, setKalkulatsiyaDocx64] = useState("");
+  const [kalkulatsiyaFilename, setKalkulatsiyaFilename] = useState("");
+  const [kalkulatsiyaDocName, setKalkulatsiyaDocName] = useState("");
+  const kalkulatsiyaPreviewRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const previous = document.body.style.overflow;
     if (isModalOpen || isCreateModalOpen || isDeleteConfirmOpen) {
@@ -790,6 +798,60 @@ export default function HujjatlarPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = bayonnomaFilename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const openKalkulatsiyaModal = async (doc: DocumentCalculationItem) => {
+    setIsKalkulatsiyaModalOpen(true);
+    setIsKalkulatsiyaLoading(true);
+    setKalkulatsiyaDocx64("");
+    setKalkulatsiyaDocName(doc.name);
+    setKalkulatsiyaFilename(`kalkulatsiya_${doc.id}.docx`);
+    try {
+      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/kalkulatsiya/`);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        alert((err as { error?: string }).error ?? "Kalkulatsiyani yuklashda xatolik yuz berdi.");
+        setIsKalkulatsiyaModalOpen(false);
+        return;
+      }
+      const payload = (await res.json()) as { data: string; filename: string; doc_name: string };
+      setKalkulatsiyaFilename(payload.filename);
+      setKalkulatsiyaDocx64(payload.data);
+    } catch {
+      alert("Kalkulatsiyani yuklashda xatolik yuz berdi.");
+      setIsKalkulatsiyaModalOpen(false);
+    } finally {
+      setIsKalkulatsiyaLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!kalkulatsiyaDocx64 || !kalkulatsiyaPreviewRef.current) return;
+    const render = async () => {
+      const { renderAsync } = await import("docx-preview");
+      const binary = Uint8Array.from(atob(kalkulatsiyaDocx64), (c) => c.charCodeAt(0));
+      if (kalkulatsiyaPreviewRef.current) {
+        kalkulatsiyaPreviewRef.current.innerHTML = "";
+        await renderAsync(binary.buffer as ArrayBuffer, kalkulatsiyaPreviewRef.current, undefined, {
+          className: "docx-preview-wrapper",
+        });
+      }
+    };
+    void render();
+  }, [kalkulatsiyaDocx64]);
+
+  const downloadKalkulatsiya = () => {
+    if (!kalkulatsiyaDocx64) return;
+    const binary = Uint8Array.from(atob(kalkulatsiyaDocx64), (c) => c.charCodeAt(0));
+    const blob = new Blob([binary], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = kalkulatsiyaFilename;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -1162,7 +1224,8 @@ export default function HujjatlarPage() {
       return searchableText.includes(normalizedSearchQuery);
     })
     .sort((a, b) => {
-      if (!sortKey) return 0;
+      // Saralash tanlanmagan bo'lsa — teskari tartib (API '-id' ni aylantiramiz)
+      if (!sortKey) return Number(a.id) - Number(b.id);
       let aVal: string | number;
       let bVal: string | number;
       if (sortKey === "name") {
@@ -1432,6 +1495,14 @@ export default function HujjatlarPage() {
                               >
                                 <span className="material-symbols-outlined text-[13px]">visibility</span>
                                 Shartnoma
+                              </button>
+                              <button
+                                className="flex items-center gap-1 rounded-md bg-violet-50 px-1.5 py-0.5 text-[11px] font-semibold text-violet-600 transition-colors hover:bg-violet-100"
+                                onClick={() => openKalkulatsiyaModal(doc)}
+                                type="button"
+                              >
+                                <span className="material-symbols-outlined text-[13px]">visibility</span>
+                                Kalkulatsiya
                               </button>
                               <button
                                 className="flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[11px] font-semibold text-sky-600 transition-colors hover:bg-sky-100"
@@ -1785,6 +1856,61 @@ export default function HujjatlarPage() {
               ) : (
                 <div
                   ref={bayonnomaPreviewRef}
+                  className="mx-auto max-w-4xl rounded-xl bg-white shadow"
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kalkulatsiya modal */}
+      {isKalkulatsiyaModalOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+          onClick={() => setIsKalkulatsiyaModalOpen(false)}
+        >
+          <div
+            className="flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+            style={{ maxHeight: "92vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 bg-violet-50 px-6 py-4">
+              <div>
+                <p className="text-[11px] font-bold tracking-wider text-violet-700 uppercase">Kalkulatsiya</p>
+                <h2 className="mt-0.5 max-w-[52ch] truncate text-sm font-bold text-slate-900">{kalkulatsiyaDocName}</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-violet-700 disabled:opacity-40"
+                  disabled={!kalkulatsiyaDocx64}
+                  onClick={downloadKalkulatsiya}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                  Word yuklab olish
+                </button>
+                <button
+                  className="flex size-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100"
+                  onClick={() => setIsKalkulatsiyaModalOpen(false)}
+                  type="button"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto bg-slate-100 p-6">
+              {isKalkulatsiyaLoading ? (
+                <div className="flex h-64 items-center justify-center gap-3 text-slate-400">
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-violet-600 border-t-transparent" />
+                  <span className="text-sm">Yuklanmoqda...</span>
+                </div>
+              ) : (
+                <div
+                  ref={kalkulatsiyaPreviewRef}
                   className="mx-auto max-w-4xl rounded-xl bg-white shadow"
                 />
               )}
