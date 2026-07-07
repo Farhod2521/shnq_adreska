@@ -880,22 +880,6 @@ def _append_koeffitsient_appendix(docx_doc, doc):
 
     created = []  # yangi qo'shilgan elementlar (keyin Nb tagiga ko'chiramiz)
 
-    # --- Sarlavha (yo'riqnomaga 1-ILOVA) ---
-    title_lines = [
-        ("Qurilish va uy-joy kommunal xoʻjaligi sohasidagi", False),
-        ("normativ hujjatlarni ishlab chiqish qiymatini aniqlash", False),
-        ("boʻyicha yo‘riqnomaga", False),
-        ("1-ILOVA", True),
-    ]
-    for text, bold in title_lines:
-        p_line = docx_doc.add_paragraph()
-        p_line.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        r = p_line.add_run(text)
-        r.bold = bold
-        r.font.name = FONT
-        r.font.size = Pt(12 if bold else 11)
-        created.append(p_line._p)
-
     # --- Jadval ---
     headers = ["Hujjat turi", "Toifa", "Yangi", "Qayta", "O'zgartirish"]
     table = docx_doc.add_table(rows=1, cols=len(headers))
