@@ -881,7 +881,7 @@ def _append_koeffitsient_appendix(docx_doc, doc):
     created = []  # yangi qo'shilgan elementlar (keyin Nb tagiga ko'chiramiz)
 
     # --- Jadval ---
-    headers = ["Hujjat turi", "Toifa", "Yangi", "Qayta", "O'zgartirish"]
+    headers = ["Hujjat turi", "Murakkablik darajasi", "Yangi", "Qayta", "O'zgartirish"]
     table = docx_doc.add_table(rows=1, cols=len(headers))
     created.append(table._tbl)
     set_borders(table)
