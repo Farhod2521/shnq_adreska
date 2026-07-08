@@ -850,8 +850,24 @@ def _append_koeffitsient_appendix(docx_doc, doc):
             borders.append(el)
         tblPr.append(borders)
 
+    def valign_center(cell):
+        tcPr = cell._tc.get_or_add_tcPr()
+        for existing in tcPr.findall(qn("w:vAlign")):
+            tcPr.remove(existing)
+        v = OxmlElement("w:vAlign")
+        v.set(qn("w:val"), "center")
+        tcPr.append(v)
+
+    def set_row_height(row, twips, rule="atLeast"):
+        trPr = row._tr.get_or_add_trPr()
+        h = OxmlElement("w:trHeight")
+        h.set(qn("w:val"), str(twips))
+        h.set(qn("w:hRule"), rule)
+        trPr.append(h)
+
     def set_cell(cell, text, *, bold=False, color=None, align="left", size=8):
         cell.text = ""
+        valign_center(cell)  # matn katakda vertikal markazda
         p = cell.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER if align == "center" else WD_ALIGN_PARAGRAPH.LEFT
         run = p.add_run(text)
@@ -888,6 +904,7 @@ def _append_koeffitsient_appendix(docx_doc, doc):
     for ci, htext in enumerate(headers):
         set_cell(table.rows[0].cells[ci], htext, bold=True, align="center", size=9)
         shade(table.rows[0].cells[ci], "D9D9E8")
+    set_row_height(table.rows[0], 510)
 
     # Faqat ushbu hujjatga tegishli guruhni ko'rsatamiz (tur aniqlansa);
     # aks holda barcha guruhlar (zaxira).
@@ -901,6 +918,7 @@ def _append_koeffitsient_appendix(docx_doc, doc):
         group_rows = []
         for level in ("1", "2", "3"):
             row = table.add_row()
+            set_row_height(row, 510)  # barcha qatorlar teng balandlikda (~0.9 sm)
             group_rows.append(row)
             cells = row.cells
             if first_row_cells is None:
@@ -922,11 +940,12 @@ def _append_koeffitsient_appendix(docx_doc, doc):
                     shade(target, DARK)
                     set_cell(target, str(values[sel_col]), bold=True, color="FFFFFF", align="center", size=9)
 
-        # nom ustunini (0) 3 qatorga birlashtirish
+        # nom ustunini (0) 3 qatorga birlashtirish — matn katak markazida (vertikal + gorizontal)
         merged = first_row_cells[0]
         for r2 in group_rows[1:]:
             merged = merged.merge(r2.cells[0])
-        merged.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+        merged.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        valign_center(merged)
 
     # --- Tanlov izohi ---
     if sel_group is not None and sel_col is not None:
