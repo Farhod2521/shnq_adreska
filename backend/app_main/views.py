@@ -935,7 +935,7 @@ def _append_koeffitsient_appendix(docx_doc, doc):
         note.alignment = WD_ALIGN_PARAGRAPH.LEFT
         r = note.add_run(
             f"Ushbu normativ hujjat uchun tanlangan: "
-            f"{_LEVEL_ROMAN[sel_level]} — {cat_name} = "
+            f"Murakkablik darajasi {_LEVEL_ROMAN[sel_level]}, {cat_name} - "
             f"{_TABLE_12[_JADVAL_12_GROUPS[sel_group][2]][sel_level][sel_col]}"
         )
         r.italic = True
