@@ -819,10 +819,11 @@ def _append_koeffitsient_appendix(docx_doc, doc):
 
     Ushbu hujjat uchun tanlangan koeffitsient (turi × toifa × ish turi) ajratib ko'rsatiladi.
     """
+    from docx.enum.table import WD_TABLE_ALIGNMENT
     from docx.enum.text import WD_ALIGN_PARAGRAPH
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
-    from docx.shared import Pt, RGBColor
+    from docx.shared import Cm, Pt, RGBColor
 
     FONT = "Times New Roman"
     LIGHT = "EDEDF7"   # tanlangan guruh — ochiq lavanda
@@ -946,6 +947,18 @@ def _append_koeffitsient_appendix(docx_doc, doc):
             merged = merged.merge(r2.cells[0])
         merged.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         valign_center(merged)
+
+    # --- Jadvalni biroz torroq qilamiz (fixed layout) va markazga qo'yamiz ---
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+    lay = OxmlElement("w:tblLayout")
+    lay.set(qn("w:type"), "fixed")
+    table._tbl.tblPr.append(lay)
+    col_widths = [Cm(4.2), Cm(2.8), Cm(1.7), Cm(1.7), Cm(2.1)]  # jami ~12.5 sm
+    for row in table.rows:
+        for i, cell in enumerate(row.cells):
+            if i < len(col_widths):
+                cell.width = col_widths[i]
 
     # --- Tanlov izohi ---
     if sel_group is not None and sel_col is not None:
