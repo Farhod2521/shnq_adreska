@@ -1025,6 +1025,13 @@ class DocumentContractAPIView(APIView):
         if mhi_amount < 0:
             mhi_amount = Decimal("0.00")
 
+        # Kalendar reja bosqich summalari: I=30%, II=30%, III=30%, IV=10% (oxirgisi qoldiq)
+        _kr_total = doc.final_total_amount
+        kr_stage1 = (_kr_total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        kr_stage2 = (_kr_total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        kr_stage3 = (_kr_total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        kr_stage4 = _kr_total - kr_stage1 - kr_stage2 - kr_stage3  # ~10%, yig'indi umumiyga teng
+
         placeholders = {
             # Hujjat ma'lumotlari
             "shnq_name": doc.name,
@@ -1067,19 +1074,19 @@ class DocumentContractAPIView(APIView):
             "institute_director": org.institute_director,
             "deputy_minister": org.deputy_minister,
             "economics_head": org.economics_head,
-            # Kalendar reja bosqichlari
+            # Kalendar reja bosqichlari — summalar umumiy narxdan 30/30/30/10 taqsimlanadi
             "I_start": doc.stage1_start,
             "I_end": doc.stage1_end,
-            "I_summa": _fmt_money(doc.stage1_amount),
+            "I_summa": _fmt_money(kr_stage1),
             "II_start": doc.stage2_start,
             "II_end": doc.stage2_end,
-            "II_summa": _fmt_money(doc.stage2_amount),
+            "II_summa": _fmt_money(kr_stage2),
             "III_start": doc.stage3_start,
             "III_end": doc.stage3_end,
-            "III_summa": _fmt_money(doc.stage3_amount),
+            "III_summa": _fmt_money(kr_stage3),
             "IV_start": doc.stage4_start,
             "IV_end": doc.stage4_end,
-            "IV_summa": _fmt_money(doc.stage4_amount),
+            "IV_summa": _fmt_money(kr_stage4),
         }
 
         buf = _fill_docx(
