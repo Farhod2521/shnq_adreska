@@ -462,6 +462,7 @@ export default function HujjatlarPage() {
 
   // Google Sheets manual sync
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isBulkKalkLoading, setIsBulkKalkLoading] = useState(false);
   const [syncCount, setSyncCount] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     return parseInt(localStorage.getItem("shnq_sync_count") ?? "0", 10);
@@ -951,6 +952,30 @@ export default function HujjatlarPage() {
     }
   };
 
+  const downloadAllKalkulatsiya = async () => {
+    setIsBulkKalkLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/document-calculations/kalkulatsiya-bulk/`);
+      if (!res.ok) {
+        setToastMessage("Kalkulatsiyalarni yuklashda xatolik yuz berdi.");
+        setShowToast(true);
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "kalkulatsiyalar.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setToastMessage("Kalkulatsiyalarni yuklashda xatolik yuz berdi.");
+      setShowToast(true);
+    } finally {
+      setIsBulkKalkLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!showToast) {
       return;
@@ -1371,6 +1396,26 @@ export default function HujjatlarPage() {
                   </span>
                 )}
               </div>
+
+              <button
+                className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition-all ${
+                  isBulkKalkLoading
+                    ? "border-violet-200 bg-violet-50 text-violet-500 cursor-not-allowed"
+                    : "border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:shadow"
+                }`}
+                disabled={isBulkKalkLoading}
+                onClick={downloadAllKalkulatsiya}
+                type="button"
+                title="Barcha hujjatlarning Kalkulatsiyasini ZIP qilib yuklab olish"
+              >
+                <span
+                  className={`material-symbols-outlined text-[18px] ${isBulkKalkLoading ? "animate-spin" : ""}`}
+                  style={isBulkKalkLoading ? { animationDuration: "1s" } : {}}
+                >
+                  {isBulkKalkLoading ? "progress_activity" : "folder_zip"}
+                </span>
+                {isBulkKalkLoading ? "Tayyorlanmoqda..." : "Barcha kalkulatsiya (ZIP)"}
+              </button>
 
               <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow">
                 <span className="material-symbols-outlined text-[18px] text-slate-400">format_list_bulleted</span>

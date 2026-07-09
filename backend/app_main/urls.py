@@ -10,6 +10,7 @@ from .views import (
     DocumentBayonnomaAPIView,
     DocumentContractAPIView,
     DocumentKalkulatsiyaAPIView,
+    DocumentKalkulatsiyaBulkAPIView,
     DocumentKalendarRejaAPIView,
     DocumentTexnikTopshiriqAPIView,
     HealthCheckAPIView,
@@ -70,6 +71,11 @@ urlpatterns = [
         "document-calculations/<int:pk>/kalkulatsiya/",
         DocumentKalkulatsiyaAPIView.as_view(),
         name="document-calculation-kalkulatsiya",
+    ),
+    path(
+        "document-calculations/kalkulatsiya-bulk/",
+        DocumentKalkulatsiyaBulkAPIView.as_view(),
+        name="document-calculation-kalkulatsiya-bulk",
     ),
     path(
         "organization-settings/",

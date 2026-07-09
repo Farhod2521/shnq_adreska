@@ -1,11 +1,14 @@
 import base64
 import io
 import os
+import re as _re_module
+import zipfile
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.conf import settings
 from django.db import transaction
+from django.http import HttpResponse
 from django.db.models import Count, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.shortcuts import get_object_or_404
@@ -1182,6 +1185,43 @@ class DocumentKalkulatsiyaAPIView(DocumentContractAPIView):
     def post_process_docx(self, docx_doc, doc):
         # Kalkulatsiya oxiriga 12-jadvalni (1-ilova) tanlangan koeffitsient ajratilgan holda qo'shamiz
         _append_koeffitsient_appendix(docx_doc, doc)
+
+
+class DocumentKalkulatsiyaBulkAPIView(APIView):
+    """Barcha hujjatlarning Kalkulatsiya .docx fayllarini bitta ZIP qilib qaytaradi."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        view = DocumentKalkulatsiyaAPIView()
+        used_names = set()
+
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for doc in DocumentCalculation.objects.all().order_by("id"):
+                try:
+                    resp = view.get(request, doc.pk)
+                except Exception:
+                    continue
+                if getattr(resp, "status_code", None) != 200:
+                    continue
+                docx_bytes = base64.b64decode(resp.data["data"])
+                safe = _re_module.sub(r"[^\w\s.\-]", "", doc.name or "").strip()[:80] or "hujjat"
+                fname = f"{doc.id}_{safe}.docx"
+                # nomlar takrorlanmasin
+                base, ext = os.path.splitext(fname)
+                n = 1
+                while fname in used_names:
+                    fname = f"{base}_{n}{ext}"
+                    n += 1
+                used_names.add(fname)
+                zf.writestr(fname, docx_bytes)
+
+        zip_buf.seek(0)
+        response = HttpResponse(zip_buf.getvalue(), content_type="application/zip")
+        response["Content-Disposition"] = 'attachment; filename="kalkulatsiyalar.zip"'
+        return response
 
 
 class SyncFromSheetsAPIView(APIView):
