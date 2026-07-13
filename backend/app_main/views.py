@@ -14,6 +14,7 @@ from django.db.models.functions import Coalesce, TruncMonth
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from docx import Document as DocxDocument
+from docx.table import _Row as _TableRow
 from openpyxl import load_workbook
 from rest_framework import status
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
@@ -758,6 +759,108 @@ def _fill_docx(template_path: str, placeholders: dict, post_process=None) -> io.
     return buf
 
 
+# ---------------------------------------------------------------------------
+# Kalendar reja — bosqich choraklari (boshlanishi/tugashi) va yillik JAMI qatorlari
+# ---------------------------------------------------------------------------
+
+_QUARTER_ROMAN = {1: "I", 2: "II", 3: "III", 4: "IV"}
+
+# development_deadline'dan olingan (yil, chorak) → 4 bosqichning
+# ((boshlanish_yil, boshlanish_chorak), (tugash_yil, tugash_chorak)) qiymatlari.
+# Sheets'da faqat quyidagi 5 ta qiymat uchraydi (foydalanuvchi tasdiqlagan).
+_KALENDAR_STAGE_MAP = {
+    (2026, 3): [((2026, 3), (2026, 3)), ((2026, 3), (2026, 3)),
+                ((2026, 3), (2026, 3)), ((2026, 3), (2026, 3))],
+    (2026, 4): [((2026, 2), (2026, 3)), ((2026, 3), (2026, 4)),
+                ((2026, 3), (2026, 4)), ((2026, 4), (2026, 4))],
+    (2027, 2): [((2026, 3), (2026, 4)), ((2027, 1), (2027, 1)),
+                ((2027, 1), (2027, 2)), ((2027, 2), (2027, 2))],
+    (2027, 3): [((2026, 3), (2026, 4)), ((2027, 1), (2027, 2)),
+                ((2027, 2), (2027, 3)), ((2027, 3), (2027, 3))],
+    (2027, 4): [((2026, 3), (2026, 4)), ((2027, 1), (2027, 2)),
+                ((2027, 2), (2027, 3)), ((2027, 3), (2027, 4))],
+}
+
+
+def _parse_deadline_quarter(text):
+    """'2026-yil IV-chorak' → (2026, 4). Aniqlanmasa None."""
+    if not text:
+        return None
+    m_year = re.search(r"(20\d{2})", text)
+    if not m_year:
+        return None
+    year = int(m_year.group(1))
+    up = text.upper()
+    for roman, val in (("IV", 4), ("III", 3), ("II", 2), ("I", 1)):
+        if re.search(r"(?<![A-Z])" + roman + r"(?![A-Z])", up):
+            return (year, val)
+    return None
+
+
+def _fmt_quarter(yq):
+    """(2026, 4) → '2026-yil IV-chorak'."""
+    year, q = yq
+    return f"{year}-yil {_QUARTER_ROMAN[q]}-chorak"
+
+
+def _compute_kalendar_stages(doc, stage_amounts):
+    """development_deadline'dan bosqich choraklari + yillik JAMI guruhlarini hisoblaydi.
+
+    stage_amounts: [I, II, III, IV] bosqich summalari (Decimal).
+    Qaytaradi dict yoki None (deadline nomalum bo'lsa):
+        {
+          "labels": [(start_str, end_str), ...4 ta],
+          "stage_years": [yil, ...4 ta],          # har bosqichning boshlanish yili
+          "year_totals": [(yil, summa), ...],      # ko'rinish tartibida
+          "multi_year": bool,
+        }
+    """
+    parsed = _parse_deadline_quarter(doc.development_deadline)
+    if parsed is None or parsed not in _KALENDAR_STAGE_MAP:
+        return None
+    stages = _KALENDAR_STAGE_MAP[parsed]
+    labels = [(_fmt_quarter(s), _fmt_quarter(e)) for (s, e) in stages]
+    stage_years = [s[0] for (s, _e) in stages]
+
+    year_totals = {}
+    order = []
+    for i, year in enumerate(stage_years):
+        if year not in year_totals:
+            year_totals[year] = Decimal("0.00")
+            order.append(year)
+        year_totals[year] += stage_amounts[i]
+
+    return {
+        "labels": labels,
+        "stage_years": stage_years,
+        "year_totals": [(y, year_totals[y]) for y in order],
+        "multi_year": len(order) > 1,
+    }
+
+
+def _set_cell_text(cell, text):
+    """Katak matnini birinchi run formatlashini saqlagan holda almashtiradi."""
+    para = cell.paragraphs[0]
+    if para.runs:
+        para.runs[0].text = text
+        for r in para.runs[1:]:
+            r.text = ""
+    else:
+        para.add_run(text)
+    for p in cell.paragraphs[1:]:
+        for r in p.runs:
+            r.text = ""
+
+
+def _set_jami_row(row, label, amount):
+    """JAMI qatorini to'ldiradi: [label, '', '', summa]."""
+    cells = row.cells
+    _set_cell_text(cells[0], label)
+    _set_cell_text(cells[1], "")
+    _set_cell_text(cells[2], "")
+    _set_cell_text(cells[3], _fmt_money(amount))
+
+
 # 12-jadval (VHM/sahifa koeffitsienti) — Kalkulatsiya 1-ilovasi uchun.
 # Har bir tuple: (Yangi, Qayta, O'zgartirish)  [I/II/III toifa]
 _TABLE_12 = {
@@ -1032,6 +1135,11 @@ class DocumentContractAPIView(APIView):
         kr_stage3 = (_kr_total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         kr_stage4 = _kr_total - kr_stage1 - kr_stage2 - kr_stage3  # ~10%, yig'indi umumiyga teng
 
+        # Kalendar reja bosqich choraklari — development_deadline'dan avtomatik hisoblanadi
+        kr_info = _compute_kalendar_stages(
+            doc, [kr_stage1, kr_stage2, kr_stage3, kr_stage4]
+        )
+
         placeholders = {
             # Hujjat ma'lumotlari
             "shnq_name": doc.name,
@@ -1089,6 +1197,12 @@ class DocumentContractAPIView(APIView):
             "IV_summa": _fmt_money(kr_stage4),
         }
 
+        # development_deadline aniqlansa — bosqich choraklarini hisoblangan qiymat bilan almashtiramiz
+        if kr_info is not None:
+            for key, (start, end) in zip(("I", "II", "III", "IV"), kr_info["labels"]):
+                placeholders[f"{key}_start"] = start
+                placeholders[f"{key}_end"] = end
+
         buf = _fill_docx(
             template_path,
             placeholders,
@@ -1109,7 +1223,11 @@ class DocumentContractAPIView(APIView):
         """Sub-view'lar hujjatga qo'shimcha element qo'shishi uchun.
 
         Shartnoma uchun: 2027 summasiga qarab "Shundan..." jumlasi va 1.3-band muddati.
+        Kalendar reja uchun: yillar bo'yicha JAMI qatorlarini joylashtirish.
         """
+        if self.TEMPLATE_NAME == "kalendar_reja.docx":
+            self._post_process_kalendar(docx_doc, doc)
+            return None
         if self.TEMPLATE_NAME != "shartnoma.docx":
             return None
 
@@ -1140,6 +1258,58 @@ class DocumentContractAPIView(APIView):
                         prev.text = prev.text[:-1] + "7"
                 break
         return None
+
+    def _post_process_kalendar(self, docx_doc, doc):
+        """Kalendar reja jadvalidagi JAMI qatorini yillar bo'yicha joylashtiradi.
+
+        Bir yil (2026'da tugasa): mavjud JAMI qatori "JAMI: 2026-yil uchun".
+        Ikki yil (2027'ga o'tsa): I-bosqichdan keyin "JAMI: 2026-yil uchun",
+        oxirida "JAMI: 2027-yil uchun". Summalar bosqichlar yig'indisi.
+        """
+        total = doc.final_total_amount
+        s1 = (total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        s2 = (total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        s3 = (total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        s4 = total - s1 - s2 - s3
+        info = _compute_kalendar_stages(doc, [s1, s2, s3, s4])
+        if info is None:
+            return
+
+        # JAMI qatori bo'lgan jadvalni topamiz
+        table = None
+        jami_idx = None
+        for t in docx_doc.tables:
+            for ri, row in enumerate(t.rows):
+                if row.cells[0].text.strip().upper().startswith("JAMI"):
+                    table, jami_idx = t, ri
+                    break
+            if table is not None:
+                break
+        if table is None:
+            return
+
+        year_totals = info["year_totals"]
+        stage_years = info["stage_years"]
+
+        # Mavjud (oxirgi) JAMI qatori → oxirgi yil guruhi
+        last_year, last_amount = year_totals[-1]
+        _set_jami_row(table.rows[jami_idx], f"JAMI: {last_year}-yil uchun", last_amount)
+
+        if not info["multi_year"]:
+            return
+
+        # Bosqich qatorlari: jami_idx-4 .. jami_idx-1 (I, II, III, IV)
+        stage_row_trs = [table.rows[jami_idx - 4 + i]._tr for i in range(4)]
+        jami_tr = table.rows[jami_idx]._tr  # nusxa uchun namuna (formatlash saqlanadi)
+
+        # Oxirgidan tashqari har bir yil guruhi uchun: guruhning oxirgi bosqichidan
+        # keyin JAMI qatorini kiritamiz
+        for year, amount in year_totals[:-1]:
+            last_stage_i = max(i for i, y in enumerate(stage_years) if y == year)
+            new_tr = copy.deepcopy(jami_tr)
+            stage_row_trs[last_stage_i].addnext(new_tr)
+            new_row = _TableRow(new_tr, table)
+            _set_jami_row(new_row, f"JAMI: {year}-yil uchun", amount)
 
 
 class DocumentKalendarRejaAPIView(DocumentContractAPIView):
