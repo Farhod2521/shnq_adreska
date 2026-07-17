@@ -1364,14 +1364,24 @@ class DocumentKalkulatsiyaAPIView(DocumentContractAPIView):
         _append_koeffitsient_appendix(docx_doc, doc)
 
 
-class DocumentKalkulatsiyaBulkAPIView(APIView):
-    """Barcha hujjatlarning Kalkulatsiya .docx fayllarini bitta ZIP qilib qaytaradi."""
+class _DocumentBulkZipAPIView(APIView):
+    """Barcha hujjatlarning bir turdagi .docx fayllarini bitta ZIP qilib qaytaradi.
+
+    Subclass'lar quyidagini belgilaydi:
+      DOC_VIEW_CLASS — har bir hujjat uchun .docx qaytaruvchi view klassi
+      ZIP_FILENAME   — yuklab olinadigan ZIP fayl nomi
+      FILE_PREFIX    — ZIP ichidagi fayllar nomi prefiksi
+    """
 
     authentication_classes = []
     permission_classes = []
 
+    DOC_VIEW_CLASS = None
+    ZIP_FILENAME = "hujjatlar.zip"
+    FILE_PREFIX = "hujjat"
+
     def get(self, request):
-        view = DocumentKalkulatsiyaAPIView()
+        view = self.DOC_VIEW_CLASS()
         used_names = set()
 
         zip_buf = io.BytesIO()
@@ -1385,7 +1395,7 @@ class DocumentKalkulatsiyaBulkAPIView(APIView):
                     continue
                 docx_bytes = base64.b64decode(resp.data["data"])
                 safe = _re_module.sub(r"[^\w\s.\-]", "", doc.name or "").strip()[:80] or "hujjat"
-                fname = f"{doc.id}_{safe}.docx"
+                fname = f"{self.FILE_PREFIX}_{doc.id}_{safe}.docx"
                 # nomlar takrorlanmasin
                 base, ext = os.path.splitext(fname)
                 n = 1
@@ -1397,8 +1407,48 @@ class DocumentKalkulatsiyaBulkAPIView(APIView):
 
         zip_buf.seek(0)
         response = HttpResponse(zip_buf.getvalue(), content_type="application/zip")
-        response["Content-Disposition"] = 'attachment; filename="kalkulatsiyalar.zip"'
+        response["Content-Disposition"] = f'attachment; filename="{self.ZIP_FILENAME}"'
         return response
+
+
+class DocumentKalkulatsiyaBulkAPIView(_DocumentBulkZipAPIView):
+    """Barcha hujjatlarning Kalkulatsiya .docx fayllarini bitta ZIP qilib qaytaradi."""
+
+    DOC_VIEW_CLASS = DocumentKalkulatsiyaAPIView
+    ZIP_FILENAME = "kalkulatsiyalar.zip"
+    FILE_PREFIX = "kalkulatsiya"
+
+
+class DocumentContractBulkAPIView(_DocumentBulkZipAPIView):
+    """Barcha hujjatlarning Shartnoma .docx fayllarini bitta ZIP qilib qaytaradi."""
+
+    DOC_VIEW_CLASS = DocumentContractAPIView
+    ZIP_FILENAME = "shartnomalar.zip"
+    FILE_PREFIX = "shartnoma"
+
+
+class DocumentKalendarRejaBulkAPIView(_DocumentBulkZipAPIView):
+    """Barcha hujjatlarning Kalendar reja .docx fayllarini bitta ZIP qilib qaytaradi."""
+
+    DOC_VIEW_CLASS = DocumentKalendarRejaAPIView
+    ZIP_FILENAME = "kalendar_rejalar.zip"
+    FILE_PREFIX = "kalendar_reja"
+
+
+class DocumentTexnikTopshiriqBulkAPIView(_DocumentBulkZipAPIView):
+    """Barcha hujjatlarning Texnik topshiriq .docx fayllarini bitta ZIP qilib qaytaradi."""
+
+    DOC_VIEW_CLASS = DocumentTexnikTopshiriqAPIView
+    ZIP_FILENAME = "texnik_topshiriqlar.zip"
+    FILE_PREFIX = "TZ"
+
+
+class DocumentBayonnomaBulkAPIView(_DocumentBulkZipAPIView):
+    """Barcha hujjatlarning Bayonnoma .docx fayllarini bitta ZIP qilib qaytaradi."""
+
+    DOC_VIEW_CLASS = DocumentBayonnomaAPIView
+    ZIP_FILENAME = "bayonnomalar.zip"
+    FILE_PREFIX = "bayonnoma"
 
 
 class SyncFromSheetsAPIView(APIView):

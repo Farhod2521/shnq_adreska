@@ -462,7 +462,7 @@ export default function HujjatlarPage() {
 
   // Google Sheets manual sync
   const [isSyncing, setIsSyncing] = useState(false);
-  const [isBulkKalkLoading, setIsBulkKalkLoading] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState<string | null>(null);
   const [syncCount, setSyncCount] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     return parseInt(localStorage.getItem("shnq_sync_count") ?? "0", 10);
@@ -952,12 +952,12 @@ export default function HujjatlarPage() {
     }
   };
 
-  const downloadAllKalkulatsiya = async () => {
-    setIsBulkKalkLoading(true);
+  const downloadAllZip = async (key: string, endpoint: string, filename: string) => {
+    setBulkLoading(key);
     try {
-      const res = await fetch(`${API_BASE_URL}/document-calculations/kalkulatsiya-bulk/`);
+      const res = await fetch(`${API_BASE_URL}/document-calculations/${endpoint}/`);
       if (!res.ok) {
-        setToastMessage("Kalkulatsiyalarni yuklashda xatolik yuz berdi.");
+        setToastMessage("Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
         setShowToast(true);
         return;
       }
@@ -965,14 +965,14 @@ export default function HujjatlarPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "kalkulatsiyalar.zip";
+      a.download = filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      setToastMessage("Kalkulatsiyalarni yuklashda xatolik yuz berdi.");
+      setToastMessage("Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
       setShowToast(true);
     } finally {
-      setIsBulkKalkLoading(false);
+      setBulkLoading(null);
     }
   };
 
@@ -1397,26 +1397,6 @@ export default function HujjatlarPage() {
                 )}
               </div>
 
-              <button
-                className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition-all ${
-                  isBulkKalkLoading
-                    ? "border-violet-200 bg-violet-50 text-violet-500 cursor-not-allowed"
-                    : "border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:shadow"
-                }`}
-                disabled={isBulkKalkLoading}
-                onClick={downloadAllKalkulatsiya}
-                type="button"
-                title="Barcha hujjatlarning Kalkulatsiyasini ZIP qilib yuklab olish"
-              >
-                <span
-                  className={`material-symbols-outlined text-[18px] ${isBulkKalkLoading ? "animate-spin" : ""}`}
-                  style={isBulkKalkLoading ? { animationDuration: "1s" } : {}}
-                >
-                  {isBulkKalkLoading ? "progress_activity" : "folder_zip"}
-                </span>
-                {isBulkKalkLoading ? "Tayyorlanmoqda..." : "Barcha kalkulatsiya (ZIP)"}
-              </button>
-
               <button className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition-all hover:bg-slate-50 hover:shadow">
                 <span className="material-symbols-outlined text-[18px] text-slate-400">format_list_bulleted</span>
                 Umumiy ro&apos;yxat
@@ -1429,6 +1409,50 @@ export default function HujjatlarPage() {
                 <span className="material-symbols-outlined text-[18px]">add</span>
                 Yangi qo&apos;shish
               </button>
+            </div>
+          </div>
+
+          {/* Barcha hujjatlarni birdan (ZIP) yuklab olish paneli */}
+          <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-violet-100 bg-violet-50/40 p-4 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-violet-700">folder_zip</span>
+              <p className="text-sm font-bold text-slate-800">Barcha hujjatlarni birdan yuklab olish (ZIP)</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2.5">
+              {[
+                { key: "shartnoma", endpoint: "shartnoma-bulk", filename: "shartnomalar.zip", label: "shartnoma" },
+                { key: "kalendar", endpoint: "kalendar-reja-bulk", filename: "kalendar_rejalar.zip", label: "kalendar reja" },
+                { key: "tz", endpoint: "texnik-topshiriq-bulk", filename: "texnik_topshiriqlar.zip", label: "texnik topshiriq" },
+                { key: "bayonnoma", endpoint: "bayonnoma-bulk", filename: "bayonnomalar.zip", label: "bayonnoma" },
+                { key: "kalkulatsiya", endpoint: "kalkulatsiya-bulk", filename: "kalkulatsiyalar.zip", label: "kalkulatsiya" },
+              ].map((item) => {
+                const loading = bulkLoading === item.key;
+                const disabled = bulkLoading !== null;
+                return (
+                  <button
+                    key={item.key}
+                    className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition-all ${
+                      loading
+                        ? "border-violet-200 bg-violet-100 text-violet-600 cursor-wait"
+                        : disabled
+                          ? "border-slate-200 bg-white text-slate-300 cursor-not-allowed"
+                          : "border-violet-200 bg-white text-violet-700 hover:bg-violet-50 hover:shadow"
+                    }`}
+                    disabled={disabled}
+                    onClick={() => downloadAllZip(item.key, item.endpoint, item.filename)}
+                    type="button"
+                    title={`Barcha hujjatlarning ${item.label} faylini ZIP qilib yuklab olish`}
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[18px] ${loading ? "animate-spin" : ""}`}
+                      style={loading ? { animationDuration: "1s" } : {}}
+                    >
+                      {loading ? "progress_activity" : "folder_zip"}
+                    </span>
+                    {loading ? "Tayyorlanmoqda..." : `Barcha ${item.label}`}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
