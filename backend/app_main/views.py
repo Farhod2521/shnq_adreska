@@ -565,7 +565,7 @@ def _three_digits_to_words(n: int) -> str:
     parts = []
     if n >= 100:
         h = n // 100
-        parts.append(("" if h == 1 else _ONES[h] + " ") + "yuz")
+        parts.append(_ONES[h] + " yuz")  # 100 → "bir yuz" (nafaqat "yuz")
         n %= 100
     if n >= 10:
         parts.append(_TENS[n // 10])
