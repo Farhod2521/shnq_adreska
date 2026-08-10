@@ -2,7 +2,9 @@ from django.urls import path
 
 from .views import (
     DashboardStatsAPIView,
-    DocumentAllGroupedBulkAPIView,
+    DocumentAllGroupedBulkDownloadAPIView,
+    DocumentAllGroupedBulkStartAPIView,
+    DocumentAllGroupedBulkStatusAPIView,
     DocumentCalculationCategoryListAPIView,
     DocumentCalculationListCreateAPIView,
     DocumentCalculationReportTableAPIView,
@@ -103,9 +105,19 @@ urlpatterns = [
         name="document-calculation-bayonnoma-bulk",
     ),
     path(
-        "document-calculations/all-grouped-bulk/",
-        DocumentAllGroupedBulkAPIView.as_view(),
-        name="document-calculation-all-grouped-bulk",
+        "document-calculations/all-grouped-bulk/start/",
+        DocumentAllGroupedBulkStartAPIView.as_view(),
+        name="document-calculation-all-grouped-bulk-start",
+    ),
+    path(
+        "document-calculations/all-grouped-bulk/status/<str:job_id>/",
+        DocumentAllGroupedBulkStatusAPIView.as_view(),
+        name="document-calculation-all-grouped-bulk-status",
+    ),
+    path(
+        "document-calculations/all-grouped-bulk/download/<str:job_id>/",
+        DocumentAllGroupedBulkDownloadAPIView.as_view(),
+        name="document-calculation-all-grouped-bulk-download",
     ),
     path(
         "organization-settings/",

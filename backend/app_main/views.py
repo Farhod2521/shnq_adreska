@@ -1,14 +1,19 @@
 import base64
 import io
+import json
 import os
 import re as _re_module
+import shutil
+import threading
+import time
+import uuid
 import zipfile
 from datetime import datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 from django.conf import settings
-from django.db import transaction
-from django.http import HttpResponse
+from django.db import connections, transaction
+from django.http import FileResponse, Http404, HttpResponse
 from django.db.models import Count, Sum, Value
 from django.db.models.functions import Coalesce, TruncMonth
 from django.shortcuts import get_object_or_404
@@ -1451,33 +1456,88 @@ class DocumentBayonnomaBulkAPIView(_DocumentBulkZipAPIView):
     FILE_PREFIX = "bayonnoma"
 
 
-class DocumentAllGroupedBulkAPIView(APIView):
-    """Barcha hujjatlarning barcha turdagi (shartnoma, kalkulatsiya, bayonnoma,
-    kalendar reja, texnik topshiriq) .docx fayllarini bitta ZIP qilib qaytaradi.
+# Barcha hujjatlarni guruhlab ZIP qilish — 264+ hujjat x 5 shablon bitta HTTP
+# so'rovda generatsiya qilinsa, gunicorn/nginx timeout'idan oshib "xatolik"
+# beradi. Shu sabab jarayon fon oqimida (background thread) ishlaydi, natija
+# diskka (MEDIA_ROOT/bulk_exports/<job_id>/) yoziladi, frontend esa progress'ni
+# status endpoint orqali so'rab turadi.
 
-    ZIP ichida har bir hujjat uchun alohida papka bo'ladi (papka nomi — hujjat
-    nomi), papka ichida esa shu hujjatga tegishli 5 ta fayl joylashadi.
-    """
+# (DOC_VIEW_CLASS, ZIP ichidagi fayl nomi)
+_ALL_GROUPED_FILE_SPECS = [
+    (DocumentContractAPIView, "Shartnoma.docx"),
+    (DocumentKalkulatsiyaAPIView, "kalkulatsiya.docx"),
+    (DocumentBayonnomaAPIView, "bayonoma.docx"),
+    (DocumentKalendarRejaAPIView, "kalendar reja.docx"),
+    (DocumentTexnikTopshiriqAPIView, "texnik topshiriq.docx"),
+]
 
-    authentication_classes = []
-    permission_classes = []
 
-    # (DOC_VIEW_CLASS, ZIP ichidagi fayl nomi)
-    FILE_SPECS = [
-        (DocumentContractAPIView, "Shartnoma.docx"),
-        (DocumentKalkulatsiyaAPIView, "kalkulatsiya.docx"),
-        (DocumentBayonnomaAPIView, "bayonoma.docx"),
-        (DocumentKalendarRejaAPIView, "kalendar reja.docx"),
-        (DocumentTexnikTopshiriqAPIView, "texnik topshiriq.docx"),
-    ]
+def _bulk_export_root():
+    path = os.path.join(settings.MEDIA_ROOT, "bulk_exports")
+    os.makedirs(path, exist_ok=True)
+    return path
 
-    def get(self, request):
-        views = [(cls(), fname) for cls, fname in self.FILE_SPECS]
+
+def _bulk_job_dir(job_id):
+    return os.path.join(_bulk_export_root(), job_id)
+
+
+def _bulk_job_status_path(job_id):
+    return os.path.join(_bulk_job_dir(job_id), "status.json")
+
+
+def _bulk_job_zip_path(job_id):
+    return os.path.join(_bulk_job_dir(job_id), "result.zip")
+
+
+def _write_bulk_job_status(job_id, data):
+    os.makedirs(_bulk_job_dir(job_id), exist_ok=True)
+    path = _bulk_job_status_path(job_id)
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+    os.replace(tmp_path, path)
+
+
+def _read_bulk_job_status(job_id):
+    path = _bulk_job_status_path(job_id)
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _cleanup_old_bulk_jobs(max_age_seconds=24 * 3600):
+    root = _bulk_export_root()
+    now = time.time()
+    try:
+        entries = os.listdir(root)
+    except OSError:
+        return
+    for entry in entries:
+        job_dir = os.path.join(root, entry)
+        try:
+            if now - os.path.getmtime(job_dir) > max_age_seconds:
+                shutil.rmtree(job_dir, ignore_errors=True)
+        except OSError:
+            continue
+
+
+def _run_all_grouped_export_job(job_id):
+    try:
+        docs = list(DocumentCalculation.objects.all().order_by("id"))
+        total = len(docs)
+        _write_bulk_job_status(job_id, {"status": "running", "done": 0, "total": total, "error": None})
+
+        views = [(cls(), fname) for cls, fname in _ALL_GROUPED_FILE_SPECS]
         used_folders = set()
+        tmp_zip_path = _bulk_job_zip_path(job_id) + ".tmp"
 
-        zip_buf = io.BytesIO()
-        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for doc in DocumentCalculation.objects.all().order_by("id"):
+        with zipfile.ZipFile(tmp_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for i, doc in enumerate(docs, start=1):
                 safe = _re_module.sub(r"[^\w\s.\-]", "", doc.name or "").strip()[:150] or "hujjat"
                 folder = safe
                 n = 1
@@ -1489,7 +1549,8 @@ class DocumentAllGroupedBulkAPIView(APIView):
                 wrote_any = False
                 for view, fname in views:
                     try:
-                        resp = view.get(request, doc.pk)
+                        # request ishlatilmaydi (5 ta .get() metodida ham request.* murojaat yo'q)
+                        resp = view.get(None, doc.pk)
                     except Exception:
                         continue
                     if getattr(resp, "status_code", None) != 200:
@@ -1501,8 +1562,58 @@ class DocumentAllGroupedBulkAPIView(APIView):
                 if not wrote_any:
                     used_folders.discard(folder)
 
-        zip_buf.seek(0)
-        response = HttpResponse(zip_buf.getvalue(), content_type="application/zip")
+                _write_bulk_job_status(job_id, {"status": "running", "done": i, "total": total, "error": None})
+
+        os.replace(tmp_zip_path, _bulk_job_zip_path(job_id))
+        _write_bulk_job_status(job_id, {"status": "done", "done": total, "total": total, "error": None})
+    except Exception as exc:
+        _write_bulk_job_status(job_id, {"status": "error", "done": 0, "total": 0, "error": str(exc)})
+    finally:
+        connections.close_all()
+
+
+class DocumentAllGroupedBulkStartAPIView(APIView):
+    """Barcha hujjatlarni guruhlab ZIP qilish jarayonini fon rejimida boshlaydi."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        _cleanup_old_bulk_jobs()
+        job_id = uuid.uuid4().hex
+        total = DocumentCalculation.objects.count()
+        _write_bulk_job_status(job_id, {"status": "running", "done": 0, "total": total, "error": None})
+        threading.Thread(target=_run_all_grouped_export_job, args=(job_id,), daemon=True).start()
+        return Response({"job_id": job_id, "total": total}, status=status.HTTP_202_ACCEPTED)
+
+
+class DocumentAllGroupedBulkStatusAPIView(APIView):
+    """Fon jarayonining holatini (nechta hujjat tayyor bo'lgani) qaytaradi."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, job_id):
+        data = _read_bulk_job_status(job_id)
+        if data is None:
+            raise Http404("Job topilmadi")
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class DocumentAllGroupedBulkDownloadAPIView(APIView):
+    """Tayyor bo'lgan ZIP faylni yuklab beradi."""
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, job_id):
+        data = _read_bulk_job_status(job_id)
+        if data is None or data.get("status") != "done":
+            raise Http404("Fayl hali tayyor emas")
+        zip_path = _bulk_job_zip_path(job_id)
+        if not os.path.exists(zip_path):
+            raise Http404("Fayl topilmadi")
+        response = FileResponse(open(zip_path, "rb"), content_type="application/zip")
         response["Content-Disposition"] = 'attachment; filename="barcha_hujjatlar.zip"'
         return response
 

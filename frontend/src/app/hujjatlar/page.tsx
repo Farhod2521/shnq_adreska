@@ -463,6 +463,7 @@ export default function HujjatlarPage() {
   // Google Sheets manual sync
   const [isSyncing, setIsSyncing] = useState(false);
   const [bulkLoading, setBulkLoading] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
   const [syncCount, setSyncCount] = useState<number>(() => {
     if (typeof window === "undefined") return 0;
     return parseInt(localStorage.getItem("shnq_sync_count") ?? "0", 10);
@@ -976,6 +977,75 @@ export default function HujjatlarPage() {
     }
   };
 
+  // Hujjatlar juda ko'p (264+ hujjat x 5 shablon) bo'lgani uchun bitta so'rovda
+  // generatsiya qilish server timeout'iga uchraydi. Shu sabab jarayon backendda
+  // fon oqimida ishlaydi, bu yerda esa job boshlanadi va progress so'rab turiladi.
+  const downloadAllGroupedZip = async () => {
+    const key = "all-grouped";
+    setBulkLoading(key);
+    setBulkProgress(null);
+    try {
+      const startRes = await fetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/start/`, {
+        method: "POST",
+      });
+      if (!startRes.ok) {
+        setToastMessage("Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
+        setShowToast(true);
+        return;
+      }
+      const { job_id: jobId, total } = (await startRes.json()) as { job_id: string; total: number };
+      setBulkProgress({ done: 0, total });
+
+      let finalStatus: "done" | "error" | null = null;
+      let errorMessage = "";
+      while (finalStatus === null) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const statusRes = await fetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/status/${jobId}/`);
+        if (!statusRes.ok) {
+          finalStatus = "error";
+          break;
+        }
+        const statusData = (await statusRes.json()) as {
+          status: "running" | "done" | "error";
+          done: number;
+          total: number;
+          error: string | null;
+        };
+        setBulkProgress({ done: statusData.done, total: statusData.total });
+        if (statusData.status === "done" || statusData.status === "error") {
+          finalStatus = statusData.status;
+          errorMessage = statusData.error ?? "";
+        }
+      }
+
+      if (finalStatus === "error") {
+        setToastMessage(errorMessage ? `ZIP tayyorlashda xatolik: ${errorMessage}` : "Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
+        setShowToast(true);
+        return;
+      }
+
+      const fileRes = await fetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/download/${jobId}/`);
+      if (!fileRes.ok) {
+        setToastMessage("Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
+        setShowToast(true);
+        return;
+      }
+      const blob = await fileRes.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "barcha_hujjatlar.zip";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setToastMessage("Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
+      setShowToast(true);
+    } finally {
+      setBulkLoading(null);
+      setBulkProgress(null);
+    }
+  };
+
   useEffect(() => {
     if (!showToast) {
       return;
@@ -1420,17 +1490,16 @@ export default function HujjatlarPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
               {(() => {
-                const item = {
-                  key: "all-grouped",
-                  endpoint: "all-grouped-bulk",
-                  filename: "barcha_hujjatlar.zip",
-                  label: "barcha hujjatlar (papkalarga ajratilgan)",
-                };
-                const loading = bulkLoading === item.key;
+                const key = "all-grouped";
+                const loading = bulkLoading === key;
                 const disabled = bulkLoading !== null;
+                const progressLabel =
+                  loading && bulkProgress
+                    ? `Tayyorlanmoqda... (${bulkProgress.done}/${bulkProgress.total})`
+                    : "Tayyorlanmoqda...";
                 return (
                   <button
-                    key={item.key}
+                    key={key}
                     className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition-all ${
                       loading
                         ? "border-[#1a227f]/30 bg-[#1a227f]/10 text-[#1a227f] cursor-wait"
@@ -1439,7 +1508,7 @@ export default function HujjatlarPage() {
                           : "border-[#1a227f] bg-[#1a227f] text-white hover:bg-[#1a227f]/90 hover:shadow"
                     }`}
                     disabled={disabled}
-                    onClick={() => downloadAllZip(item.key, item.endpoint, item.filename)}
+                    onClick={() => downloadAllGroupedZip()}
                     type="button"
                     title="Har bir hujjat uchun alohida papkada shartnoma, kalkulatsiya, bayonnoma, kalendar reja va texnik topshiriqni ZIP qilib yuklab olish"
                   >
@@ -1449,7 +1518,7 @@ export default function HujjatlarPage() {
                     >
                       {loading ? "progress_activity" : "folder_zip"}
                     </span>
-                    {loading ? "Tayyorlanmoqda..." : "Barcha hujjatlarni birdan yuklab olish"}
+                    {loading ? progressLabel : "Barcha hujjatlarni birdan yuklab olish"}
                   </button>
                 );
               })()}
