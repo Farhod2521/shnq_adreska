@@ -1539,6 +1539,8 @@ def _run_all_grouped_export_job(job_id):
         with zipfile.ZipFile(tmp_zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for i, doc in enumerate(docs, start=1):
                 safe = _re_module.sub(r"[^\w\s.\-]", "", doc.name or "").strip()[:150] or "hujjat"
+                # Saytdagi jadval tartib raqami bilan bir xil bo'lishi uchun (ID bo'yicha o'sish tartibi)
+                safe = f"{i}- {safe}"
                 folder = safe
                 n = 1
                 while folder in used_folders:
