@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     DashboardStatsAPIView,
+    DocumentAllGroupedBulkAPIView,
     DocumentCalculationCategoryListAPIView,
     DocumentCalculationListCreateAPIView,
     DocumentCalculationReportTableAPIView,
@@ -100,6 +101,11 @@ urlpatterns = [
         "document-calculations/bayonnoma-bulk/",
         DocumentBayonnomaBulkAPIView.as_view(),
         name="document-calculation-bayonnoma-bulk",
+    ),
+    path(
+        "document-calculations/all-grouped-bulk/",
+        DocumentAllGroupedBulkAPIView.as_view(),
+        name="document-calculation-all-grouped-bulk",
     ),
     path(
         "organization-settings/",

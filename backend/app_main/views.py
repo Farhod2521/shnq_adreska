@@ -1451,6 +1451,62 @@ class DocumentBayonnomaBulkAPIView(_DocumentBulkZipAPIView):
     FILE_PREFIX = "bayonnoma"
 
 
+class DocumentAllGroupedBulkAPIView(APIView):
+    """Barcha hujjatlarning barcha turdagi (shartnoma, kalkulatsiya, bayonnoma,
+    kalendar reja, texnik topshiriq) .docx fayllarini bitta ZIP qilib qaytaradi.
+
+    ZIP ichida har bir hujjat uchun alohida papka bo'ladi (papka nomi — hujjat
+    nomi), papka ichida esa shu hujjatga tegishli 5 ta fayl joylashadi.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    # (DOC_VIEW_CLASS, ZIP ichidagi fayl nomi)
+    FILE_SPECS = [
+        (DocumentContractAPIView, "Shartnoma.docx"),
+        (DocumentKalkulatsiyaAPIView, "kalkulatsiya.docx"),
+        (DocumentBayonnomaAPIView, "bayonoma.docx"),
+        (DocumentKalendarRejaAPIView, "kalendar reja.docx"),
+        (DocumentTexnikTopshiriqAPIView, "texnik topshiriq.docx"),
+    ]
+
+    def get(self, request):
+        views = [(cls(), fname) for cls, fname in self.FILE_SPECS]
+        used_folders = set()
+
+        zip_buf = io.BytesIO()
+        with zipfile.ZipFile(zip_buf, "w", zipfile.ZIP_DEFLATED) as zf:
+            for doc in DocumentCalculation.objects.all().order_by("id"):
+                safe = _re_module.sub(r"[^\w\s.\-]", "", doc.name or "").strip()[:150] or "hujjat"
+                folder = safe
+                n = 1
+                while folder in used_folders:
+                    folder = f"{safe} ({n})"
+                    n += 1
+                used_folders.add(folder)
+
+                wrote_any = False
+                for view, fname in views:
+                    try:
+                        resp = view.get(request, doc.pk)
+                    except Exception:
+                        continue
+                    if getattr(resp, "status_code", None) != 200:
+                        continue
+                    docx_bytes = base64.b64decode(resp.data["data"])
+                    zf.writestr(f"{folder}/{fname}", docx_bytes)
+                    wrote_any = True
+
+                if not wrote_any:
+                    used_folders.discard(folder)
+
+        zip_buf.seek(0)
+        response = HttpResponse(zip_buf.getvalue(), content_type="application/zip")
+        response["Content-Disposition"] = 'attachment; filename="barcha_hujjatlar.zip"'
+        return response
+
+
 class SyncFromSheetsAPIView(APIView):
     """Google Sheets dan bazani qo'lda yangilash."""
 

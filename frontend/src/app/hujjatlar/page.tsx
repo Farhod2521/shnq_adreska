@@ -1419,6 +1419,41 @@ export default function HujjatlarPage() {
               <p className="text-sm font-bold text-slate-800">Barcha hujjatlarni birdan yuklab olish (ZIP)</p>
             </div>
             <div className="flex flex-wrap items-center gap-2.5">
+              {(() => {
+                const item = {
+                  key: "all-grouped",
+                  endpoint: "all-grouped-bulk",
+                  filename: "barcha_hujjatlar.zip",
+                  label: "barcha hujjatlar (papkalarga ajratilgan)",
+                };
+                const loading = bulkLoading === item.key;
+                const disabled = bulkLoading !== null;
+                return (
+                  <button
+                    key={item.key}
+                    className={`flex items-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold shadow-sm transition-all ${
+                      loading
+                        ? "border-[#1a227f]/30 bg-[#1a227f]/10 text-[#1a227f] cursor-wait"
+                        : disabled
+                          ? "border-slate-200 bg-white text-slate-300 cursor-not-allowed"
+                          : "border-[#1a227f] bg-[#1a227f] text-white hover:bg-[#1a227f]/90 hover:shadow"
+                    }`}
+                    disabled={disabled}
+                    onClick={() => downloadAllZip(item.key, item.endpoint, item.filename)}
+                    type="button"
+                    title="Har bir hujjat uchun alohida papkada shartnoma, kalkulatsiya, bayonnoma, kalendar reja va texnik topshiriqni ZIP qilib yuklab olish"
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[18px] ${loading ? "animate-spin" : ""}`}
+                      style={loading ? { animationDuration: "1s" } : {}}
+                    >
+                      {loading ? "progress_activity" : "folder_zip"}
+                    </span>
+                    {loading ? "Tayyorlanmoqda..." : "Barcha hujjatlarni birdan yuklab olish"}
+                  </button>
+                );
+              })()}
+              <div className="mx-1 h-6 w-px bg-violet-200" />
               {[
                 { key: "shartnoma", endpoint: "shartnoma-bulk", filename: "shartnomalar.zip", label: "shartnoma" },
                 { key: "kalendar", endpoint: "kalendar-reja-bulk", filename: "kalendar_rejalar.zip", label: "kalendar reja" },
