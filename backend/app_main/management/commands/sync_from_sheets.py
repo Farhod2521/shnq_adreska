@@ -20,7 +20,7 @@ from google.oauth2.service_account import Credentials
 from app_main.models import DocumentCalculation, DocumentCalculationCategory
 
 SPREADSHEET_ID = "1-Ctzg2RPBiSUM-d7Ps74QSNW5mKcG79ZlOrOwdSv9Fg"
-SHEET_GID = 1494376803
+SHEET_GID = 146616577
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
@@ -87,7 +87,7 @@ def _str(value):
 
 def _is_data_row(row):
     """Haqiqiy hujjat qatori ekanligini tekshiradi."""
-    col_n = _str(row[13]).lower()
+    col_n = _str(row[15]).lower()
     col_c = _str(row[2])
     if not col_c or col_n not in KNOWN_TYPES:
         return False
@@ -187,7 +187,7 @@ class Command(BaseCommand):
         current_category_name = None
 
         for row in rows:
-            while len(row) < 14:
+            while len(row) < 16:
                 row.append("")
 
             col_a = _str(row[0])
@@ -201,9 +201,9 @@ class Command(BaseCommand):
             if not _is_data_row(row):
                 continue
 
-            col_n = _str(row[13]).lower()
-            col_k = _str(row[10]).lower()
-            col_l = _str(row[11])
+            col_n = _str(row[15]).lower()
+            col_k = _str(row[12]).lower()
+            col_l = _str(row[13])
 
             normative_type = TYPE_MAP.get(col_n, "shnq")
             # Hujjat nomi prefiksiga qarab turni aniqlaymiz — Sheets'dagi harf
@@ -226,11 +226,11 @@ class Command(BaseCommand):
             }.get(complexity_int, DocumentCalculation.ComplexityLevel.LEVEL_1)
 
             try:
-                total_pages = int(float(_str(row[9]).replace("\xa0", "").replace(",", "."))) if _str(row[9]) else 0
+                total_pages = int(float(_str(row[11]).replace("\xa0", "").replace(",", "."))) if _str(row[11]) else 0
             except (ValueError, TypeError):
                 total_pages = 0
 
-            deadline = _str(row[6]).replace("\n", " ").strip()
+            deadline = _str(row[8]).replace("\n", " ").strip()
 
             records.append({
                 "name": col_c,
@@ -239,15 +239,18 @@ class Command(BaseCommand):
                 "document_category": document_category,
                 "complexity_level": complexity_level,
                 "total_pages": total_pages,
-                "final_total_amount": _dec(row[3]),
+                "final_total_amount": _dec(row[4]),
                 # Excel umumiy narxi (ming so'm) — MQN/Eurocode uchun formula o'rniga
-                "sheet_total_amount": _dec(row[3], places="0.001"),
+                "sheet_total_amount": _dec(row[4], places="0.001"),
                 # 3 kasr xona — ming so'mdagi qiymat ×1000 qilinganda aniqlik yo'qolmasligi uchun
-                "completed_amount": _dec(row[4], places="0.001"),
-                "planned_amount": _dec(row[5], places="0.001"),
+                "completed_amount": _dec(row[5], places="0.001"),
+                # "2026-yilda bajariladigan" — joriy yilga rejalashtirilgan qism (2027-yilga
+                # ajratilgan alohida ustun (row[7]) endi bor, lekin model uni saqlamaydi —
+                # views.py joriy sxema bo'yicha uni final_total_amount'dan hisoblab chiqaradi)
+                "planned_amount": _dec(row[6], places="0.001"),
                 "development_deadline": deadline,
-                "executor_organization": _str(row[7]),
-                "notes": _str(row[8]),
+                "executor_organization": _str(row[9]),
+                "notes": _str(row[10]),
             })
 
         return records
