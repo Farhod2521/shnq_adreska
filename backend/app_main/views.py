@@ -1105,7 +1105,7 @@ class DocumentContractAPIView(APIView):
 
         # Formuladan to'g'ri yakuniy summani hisoblash (DB'dagi eski qiymat emas)
         # apply_normative_coefficients() → NormativeCoefficient jadvalidan VHM oladi
-        # recalculate_final_total_amount() → VHM × pages × MROT × 2.1 × 1.12 [× 1.4]
+        # recalculate_final_total_amount() → VHM × pages × BHM(Sozlamalar) × 2.1 × 1.12 [× 1.4]
         doc.apply_normative_coefficients()
         doc.recalculate_final_total_amount()
         # doc.final_total_amount endi to'g'ri hisoblangan qiymat (DB'ga saqlanmaydi)

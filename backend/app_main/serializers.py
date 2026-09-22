@@ -169,5 +169,11 @@ class DocumentCalculationCreateSerializer(serializers.Serializer):
 class OrganizationSettingsSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrganizationSettings
-        fields = ["institute_director", "deputy_minister", "economics_head", "updated_at"]
+        fields = [
+            "institute_director",
+            "deputy_minister",
+            "economics_head",
+            "base_calculation_amount",
+            "updated_at",
+        ]
         read_only_fields = ["updated_at"]

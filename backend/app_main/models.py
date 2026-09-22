@@ -247,7 +247,10 @@ class DocumentCalculation(models.Model):
     SHEET_TOTAL_TYPES = ("mqn", "eurocode")
 
     def recalculate_final_total_amount(self) -> Decimal:
-        """Formula: VHM × sahifalar_soni × BHM(412_000) × 2.1 × 1.12 [× 1.4 agar ilmiy tadqiqot talab etilsa]
+        """Formula: VHM × sahifalar_soni × BHM × 2.1 × 1.12 [× 1.4 agar ilmiy tadqiqot talab etilsa]
+
+        BHM (bazaviy hisoblash miqdori) — Sozlamalar sahifasida tahrirlanadi
+        (OrganizationSettings.base_calculation_amount), standart qiymati 412 000.
 
         MQN va Eurocode uchun formula boshqacha — umumiy narx Excel'dagi qiymatdan olinadi
         (Sheets ming so'mda saqlaydi → so'mga o'tkazish uchun ×1000).
@@ -262,11 +265,12 @@ class DocumentCalculation(models.Model):
             self.final_total_amount = Decimal("0.00")
             return self.final_total_amount
 
+        bhm = OrganizationSettings.get_instance().base_calculation_amount or MROT
         research_factor = Decimal("1.4") if self.is_research_required else Decimal("1")
         result = (
             self.selected_base_coefficient
             * Decimal(self.total_pages)
-            * MROT
+            * bhm
             * Decimal("2.1")
             * Decimal("1.12")
             * research_factor
@@ -286,6 +290,12 @@ class OrganizationSettings(models.Model):
     )
     economics_head = models.CharField(
         max_length=255, blank=True, default="", verbose_name="Iqtisod bo'lim boshlig'i"
+    )
+    base_calculation_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        default=MROT,
+        verbose_name="BHM (bazaviy hisoblash miqdori)",
     )
     updated_at = models.DateTimeField(auto_now=True)
 

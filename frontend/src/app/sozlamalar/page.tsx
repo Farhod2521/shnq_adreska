@@ -9,6 +9,7 @@ type OrgSettings = {
   institute_director: string;
   deputy_minister: string;
   economics_head: string;
+  base_calculation_amount: string;
   updated_at?: string;
 };
 
@@ -41,6 +42,7 @@ export default function SozlamalarPage() {
     institute_director: "",
     deputy_minister: "",
     economics_head: "",
+    base_calculation_amount: "412000",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,6 +61,7 @@ export default function SozlamalarPage() {
           institute_director: data.institute_director || "",
           deputy_minister: data.deputy_minister || "",
           economics_head: data.economics_head || "",
+          base_calculation_amount: data.base_calculation_amount || "412000",
         });
         if (data.updated_at) {
           setSavedAt(new Date(data.updated_at).toLocaleString("uz-UZ"));
@@ -169,24 +172,52 @@ export default function SozlamalarPage() {
                       ))}
                     </div>
                   ) : (
-                    PLACEHOLDER_INFO.map((field) => (
-                      <div key={field.key}>
+                    <>
+                      {PLACEHOLDER_INFO.map((field) => (
+                        <div key={field.key}>
+                          <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                            <span className="material-symbols-outlined text-[16px] text-slate-400">{field.icon}</span>
+                            {field.label}
+                          </label>
+                          <input
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#1a227f]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a227f]/15"
+                            onChange={(e) =>
+                              setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
+                            }
+                            placeholder={`Masalan: Karimov Jasur Abdullayevich`}
+                            type="text"
+                            value={(values as Record<string, string>)[field.key]}
+                          />
+                          <p className="mt-1 text-[11px] text-slate-400">{field.hint}</p>
+                        </div>
+                      ))}
+
+                      <div className="border-t border-slate-100 pt-5">
                         <label className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                          <span className="material-symbols-outlined text-[16px] text-slate-400">{field.icon}</span>
-                          {field.label}
+                          <span className="material-symbols-outlined text-[16px] text-slate-400">payments</span>
+                          BHM (bazaviy hisoblash miqdori)
                         </label>
-                        <input
-                          className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#1a227f]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a227f]/15"
-                          onChange={(e) =>
-                            setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
-                          }
-                          placeholder={`Masalan: Karimov Jasur Abdullayevich`}
-                          type="text"
-                          value={(values as Record<string, string>)[field.key]}
-                        />
-                        <p className="mt-1 text-[11px] text-slate-400">{field.hint}</p>
+                        <div className="relative">
+                          <input
+                            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 pr-14 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[#1a227f]/40 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1a227f]/15"
+                            min="0"
+                            onChange={(e) =>
+                              setValues((prev) => ({ ...prev, base_calculation_amount: e.target.value }))
+                            }
+                            placeholder="412000"
+                            step="0.01"
+                            type="number"
+                            value={values.base_calculation_amount}
+                          />
+                          <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-xs font-medium text-slate-400">
+                            so&apos;m
+                          </span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          Barcha kalkulatsiyalarda ishlatiladi: VHM × sahifalar soni × BHM × 2.1 × 1.12
+                        </p>
                       </div>
-                    ))
+                    </>
                   )}
                 </div>
 
