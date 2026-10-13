@@ -20,7 +20,7 @@ from google.oauth2.service_account import Credentials
 from app_main.models import DocumentCalculation, DocumentCalculationCategory
 
 SPREADSHEET_ID = "1-Ctzg2RPBiSUM-d7Ps74QSNW5mKcG79ZlOrOwdSv9Fg"
-SHEET_GID = 146616577
+SHEET_GID = 1429363547
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
@@ -230,7 +230,7 @@ class Command(BaseCommand):
             except (ValueError, TypeError):
                 total_pages = 0
 
-            deadline = _str(row[8]).replace("\n", " ").strip()
+            deadline = _str(row[6]).replace("\n", " ").strip()
 
             records.append({
                 "name": col_c,
@@ -239,18 +239,16 @@ class Command(BaseCommand):
                 "document_category": document_category,
                 "complexity_level": complexity_level,
                 "total_pages": total_pages,
-                "final_total_amount": _dec(row[4]),
+                "final_total_amount": _dec(row[3]),
                 # Excel umumiy narxi (ming so'm) — MQN/Eurocode uchun formula o'rniga
-                "sheet_total_amount": _dec(row[4], places="0.001"),
+                "sheet_total_amount": _dec(row[3], places="0.001"),
                 # 3 kasr xona — ming so'mdagi qiymat ×1000 qilinganda aniqlik yo'qolmasligi uchun
-                "completed_amount": _dec(row[5], places="0.001"),
-                # "2026-yilda bajariladigan" — joriy yilga rejalashtirilgan qism (2027-yilga
-                # ajratilgan alohida ustun (row[7]) endi bor, lekin model uni saqlamaydi —
-                # views.py joriy sxema bo'yicha uni final_total_amount'dan hisoblab chiqaradi)
-                "planned_amount": _dec(row[6], places="0.001"),
+                "completed_amount": _dec(row[4], places="0.001"),
+                # "2026-yilga rejalashtirilgan" — joriy yilga rejalashtirilgan qism
+                "planned_amount": _dec(row[5], places="0.001"),
                 "development_deadline": deadline,
-                "executor_organization": _str(row[9]),
-                "notes": _str(row[10]),
+                "executor_organization": _str(row[7]),
+                "notes": _str(row[8]),
             })
 
         return records
