@@ -843,6 +843,29 @@ def _compute_kalendar_stages(doc, stage_amounts):
     }
 
 
+def _compute_kr_stage_amounts(doc):
+    """Kalendar reja / Bayonnoma bosqich summalari.
+
+    I-bosqich — Google Sheets'dagi haqiqiy 2026-yilga rejalashtirilgan summa
+    (doc.planned_amount). Qolgan qism (umumiy narx − 2026-yilga rejalashtirilgan
+    − 01.01.2026'gacha bajarilgan) II/III/IV bosqichlarga 30% / 60% / 10%
+    nisbatda bo'linadi (IV — qoldiq, yig'indi aniq teng bo'lishi uchun).
+    """
+    scale = Decimal("1000")
+    total = doc.final_total_amount
+    amount_2026 = (doc.planned_amount or Decimal("0.00")) * scale
+    completed_before = (doc.completed_amount or Decimal("0.00")) * scale
+    remaining = total - amount_2026 - completed_before
+    if remaining < 0:
+        remaining = Decimal("0.00")
+
+    s1 = amount_2026.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    s2 = (remaining * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    s3 = (remaining * Decimal("0.60")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    s4 = remaining - s2 - s3
+    return s1, s2, s3, s4
+
+
 def _set_cell_text(cell, text):
     """Katak matnini birinchi run formatlashini saqlagan holda almashtiradi."""
     para = cell.paragraphs[0]
@@ -1133,12 +1156,9 @@ class DocumentContractAPIView(APIView):
         if mhi_amount < 0:
             mhi_amount = Decimal("0.00")
 
-        # Kalendar reja bosqich summalari: I=30%, II=30%, III=30%, IV=10% (oxirgisi qoldiq)
-        _kr_total = doc.final_total_amount
-        kr_stage1 = (_kr_total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        kr_stage2 = (_kr_total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        kr_stage3 = (_kr_total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        kr_stage4 = _kr_total - kr_stage1 - kr_stage2 - kr_stage3  # ~10%, yig'indi umumiyga teng
+        # Kalendar reja bosqich summalari: I = Sheets'dagi 2026-yil summasi,
+        # qolgan qism (2027-yilga) II=30%, III=60%, IV=10% (oxirgisi qoldiq)
+        kr_stage1, kr_stage2, kr_stage3, kr_stage4 = _compute_kr_stage_amounts(doc)
 
         # Kalendar reja bosqich choraklari — development_deadline'dan avtomatik hisoblanadi
         kr_info = _compute_kalendar_stages(
@@ -1271,11 +1291,7 @@ class DocumentContractAPIView(APIView):
         Ikki yil (2027'ga o'tsa): I-bosqichdan keyin "JAMI: 2026-yil uchun",
         oxirida "JAMI: 2027-yil uchun". Summalar bosqichlar yig'indisi.
         """
-        total = doc.final_total_amount
-        s1 = (total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        s2 = (total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        s3 = (total * Decimal("0.30")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        s4 = total - s1 - s2 - s3
+        s1, s2, s3, s4 = _compute_kr_stage_amounts(doc)
         info = _compute_kalendar_stages(doc, [s1, s2, s3, s4])
         if info is None:
             return
