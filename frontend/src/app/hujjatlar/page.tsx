@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import { API_BASE_URL, apiFetch } from "@/lib/auth";
 import AppLoadingState from "@/components/AppLoadingState";
 import { useEffect, useRef, useState } from "react";
 
@@ -58,7 +59,6 @@ type DocumentFormValues = {
   stage4_amount: number;
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 const MROT_VALUE = 412_000;
 const HIGH_AMOUNT_THRESHOLD = 2_472_000_000;
 
@@ -631,7 +631,7 @@ export default function HujjatlarPage() {
     setContractDocName(doc.name);
     setContractFilename(`shartnoma_${doc.id}.docx`);
     try {
-      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/contract/`);
+      const res = await apiFetch(`${API_BASE_URL}/document-calculations/${doc.id}/contract/`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         alert((err as { error?: string }).error ?? "Shartnomani yuklashda xatolik yuz berdi.");
@@ -685,7 +685,7 @@ export default function HujjatlarPage() {
     setTexnikDocName(doc.name);
     setTexnikFilename(`texnik_topshiriq_${doc.id}.docx`);
     try {
-      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/texnik-topshiriq/`);
+      const res = await apiFetch(`${API_BASE_URL}/document-calculations/${doc.id}/texnik-topshiriq/`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         alert((err as { error?: string }).error ?? "Texnik topshiriqni yuklashda xatolik yuz berdi.");
@@ -739,7 +739,7 @@ export default function HujjatlarPage() {
     setKalendarDocName(doc.name);
     setKalendarFilename(`kalendar_reja_${doc.id}.docx`);
     try {
-      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/kalendar-reja/`);
+      const res = await apiFetch(`${API_BASE_URL}/document-calculations/${doc.id}/kalendar-reja/`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         alert((err as { error?: string }).error ?? "Kalendar rejani yuklashda xatolik yuz berdi.");
@@ -793,7 +793,7 @@ export default function HujjatlarPage() {
     setBayonnomaDocName(doc.name);
     setBayonnomaFilename(`bayonnoma_${doc.id}.docx`);
     try {
-      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/bayonnoma/`);
+      const res = await apiFetch(`${API_BASE_URL}/document-calculations/${doc.id}/bayonnoma/`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         alert((err as { error?: string }).error ?? "Bayonnomani yuklashda xatolik yuz berdi.");
@@ -847,7 +847,7 @@ export default function HujjatlarPage() {
     setKalkulatsiyaDocName(doc.name);
     setKalkulatsiyaFilename(`kalkulatsiya_${doc.id}.docx`);
     try {
-      const res = await fetch(`${API_BASE_URL}/document-calculations/${doc.id}/kalkulatsiya/`);
+      const res = await apiFetch(`${API_BASE_URL}/document-calculations/${doc.id}/kalkulatsiya/`);
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         alert((err as { error?: string }).error ?? "Kalkulatsiyani yuklashda xatolik yuz berdi.");
@@ -897,7 +897,7 @@ export default function HujjatlarPage() {
   const loadDocuments = async () => {
     setIsDocumentsLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/document-calculations/`);
+      const response = await apiFetch(`${API_BASE_URL}/document-calculations/`);
       if (!response.ok) {
         throw new Error("Hujjatlar ro'yxatini yuklashda xatolik.");
       }
@@ -912,7 +912,7 @@ export default function HujjatlarPage() {
 
   const loadNormativeOptions = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/normative-coefficients/`);
+      const response = await apiFetch(`${API_BASE_URL}/normative-coefficients/`);
       if (!response.ok) {
         return;
       }
@@ -931,7 +931,7 @@ export default function HujjatlarPage() {
   const handleSyncSheets = async () => {
     setIsSyncing(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/sync-sheets/`, { method: "POST" });
+      const response = await apiFetch(`${API_BASE_URL}/sync-sheets/`, { method: "POST" });
       if (!response.ok) {
         const err = (await response.json().catch(() => ({}))) as { detail?: string };
         throw new Error(err.detail ?? "Sync xatoligi yuz berdi.");
@@ -956,7 +956,7 @@ export default function HujjatlarPage() {
   const downloadAllZip = async (key: string, endpoint: string, filename: string) => {
     setBulkLoading(key);
     try {
-      const res = await fetch(`${API_BASE_URL}/document-calculations/${endpoint}/`);
+      const res = await apiFetch(`${API_BASE_URL}/document-calculations/${endpoint}/`);
       if (!res.ok) {
         setToastMessage("Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
         setShowToast(true);
@@ -985,7 +985,7 @@ export default function HujjatlarPage() {
     setBulkLoading(key);
     setBulkProgress(null);
     try {
-      const startRes = await fetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/start/`, {
+      const startRes = await apiFetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/start/`, {
         method: "POST",
       });
       if (!startRes.ok) {
@@ -1000,7 +1000,7 @@ export default function HujjatlarPage() {
       let errorMessage = "";
       while (finalStatus === null) {
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        const statusRes = await fetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/status/${jobId}/`);
+        const statusRes = await apiFetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/status/${jobId}/`);
         if (!statusRes.ok) {
           finalStatus = "error";
           break;
@@ -1024,7 +1024,7 @@ export default function HujjatlarPage() {
         return;
       }
 
-      const fileRes = await fetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/download/${jobId}/`);
+      const fileRes = await apiFetch(`${API_BASE_URL}/document-calculations/all-grouped-bulk/download/${jobId}/`);
       if (!fileRes.ok) {
         setToastMessage("Fayllarni ZIP qilib yuklashda xatolik yuz berdi.");
         setShowToast(true);
@@ -1100,8 +1100,8 @@ export default function HujjatlarPage() {
       setFormError("");
       try {
         const [normativeResponse, categoriesResponse] = await Promise.all([
-          fetch(`${API_BASE_URL}/normative-coefficients/`),
-          fetch(`${API_BASE_URL}/document-calculation-categories/`),
+          apiFetch(`${API_BASE_URL}/normative-coefficients/`),
+          apiFetch(`${API_BASE_URL}/document-calculation-categories/`),
         ]);
 
         if (!normativeResponse.ok || !categoriesResponse.ok) {
@@ -1151,7 +1151,7 @@ export default function HujjatlarPage() {
         : `${API_BASE_URL}/document-calculations/`;
       const method = editingDocumentId ? "PUT" : "POST";
 
-      const response = await fetch(endpoint, {
+      const response = await apiFetch(endpoint, {
         method,
         headers: {
           "Content-Type": "application/json",
@@ -1218,7 +1218,7 @@ export default function HujjatlarPage() {
     }
     setIsDeleting(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/document-calculations/${documentToDelete.id}/`, {
+      const response = await apiFetch(`${API_BASE_URL}/document-calculations/${documentToDelete.id}/`, {
         method: "DELETE",
       });
       if (!response.ok) {

@@ -33,6 +33,9 @@ services:
       DJANGO_DEBUG: "True"
       DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1"
       CORS_ALLOW_ALL_ORIGINS: "True"
+      # Tizimga kirish uchun admin login/parol (har ishga tushganda yaratiladi/yangilanadi)
+      DJANGO_ADMIN_USERNAME: admin
+      DJANGO_ADMIN_PASSWORD: Adreska@2026
     depends_on:
       postgres:
         condition: service_healthy

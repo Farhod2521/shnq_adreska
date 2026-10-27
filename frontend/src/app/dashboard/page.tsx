@@ -1,6 +1,7 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import { API_BASE_URL, apiFetch } from "@/lib/auth";
 import { useEffect, useMemo, useState } from "react";
 
 type DashboardTypeStat = {
@@ -36,7 +37,6 @@ type DashboardStatsResponse = {
   latest_calculations: LatestCalculation[];
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 
 const formatMoney = (value: string | number): string =>
   new Intl.NumberFormat("uz-UZ", {
@@ -174,7 +174,7 @@ export default function DashboardPage() {
       setIsLoading(true);
       setError("");
       try {
-        const response = await fetch(`${API_BASE_URL}/dashboard-stats/`);
+        const response = await apiFetch(`${API_BASE_URL}/dashboard-stats/`);
         if (!response.ok) {
           throw new Error("Dashboard statistikalarini yuklashda xatolik yuz berdi.");
         }

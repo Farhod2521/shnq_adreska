@@ -1,6 +1,54 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useState } from "react";
+import { API_BASE_URL, AuthUser, getToken, saveAuth } from "@/lib/auth";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (getToken()) router.replace("/dashboard");
+  }, [router]);
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    if (!username.trim() || !password) {
+      setError("Login va parolni kiriting.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: username.trim(), password }),
+      });
+      const data = (await response.json().catch(() => ({}))) as {
+        token?: string;
+        user?: AuthUser;
+        detail?: string;
+      };
+      if (!response.ok || !data.token || !data.user) {
+        setError(data.detail ?? "Login yoki parol noto'g'ri.");
+        return;
+      }
+      saveAuth(data.token, data.user, remember);
+      router.replace("/dashboard");
+    } catch {
+      setError("Server bilan bog'lanib bo'lmadi. Keyinroq urinib ko'ring.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background-light p-4 font-sans text-slate-900">
       <div className="flex w-full max-w-[440px] flex-col items-center">
@@ -45,7 +93,14 @@ export default function LoginPage() {
               Ma&apos;lumotlaringizni kiriting
             </p>
 
-            <form className="space-y-5">
+            <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+              {error && (
+                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                  <span className="material-symbols-outlined text-[20px]">error</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
               <div className="flex flex-col gap-1.5">
                 <label className="ml-1 text-sm font-semibold text-slate-700">Foydalanuvchi</label>
                 <div className="group relative">
@@ -56,6 +111,9 @@ export default function LoginPage() {
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pr-4 pl-10 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
                     placeholder="Foydalanuvchi nomi"
                     type="text"
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
                   />
                 </div>
               </div>
@@ -63,9 +121,6 @@ export default function LoginPage() {
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between px-1">
                   <label className="text-sm font-semibold text-slate-700">Parol</label>
-                  <a className="text-xs font-medium text-primary transition-all hover:underline" href="#">
-                    Parolni unutdingizmi?
-                  </a>
                 </div>
                 <div className="group relative">
                   <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-slate-400 transition-colors group-focus-within:text-primary">
@@ -74,13 +129,20 @@ export default function LoginPage() {
                   <input
                     className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pr-12 pl-10 text-slate-900 outline-none transition-all placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
                     placeholder="Parolingiz"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
                   <button
                     className="absolute top-1/2 right-3 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
                     type="button"
+                    aria-label={showPassword ? "Parolni yashirish" : "Parolni ko'rsatish"}
+                    onClick={() => setShowPassword((v) => !v)}
                   >
-                    <span className="material-symbols-outlined text-[20px]">visibility</span>
+                    <span className="material-symbols-outlined text-[20px]">
+                      {showPassword ? "visibility_off" : "visibility"}
+                    </span>
                   </button>
                 </div>
               </div>
@@ -90,21 +152,24 @@ export default function LoginPage() {
                   className="h-4 w-4 cursor-pointer rounded border-slate-300 bg-slate-100 text-primary focus:ring-2 focus:ring-primary"
                   id="remember"
                   type="checkbox"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
                 />
                 <label className="ml-2 cursor-pointer text-sm text-slate-600" htmlFor="remember">
                   Meni eslab qol
                 </label>
               </div>
 
-              <Link
-                href="/dashboard"
-                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3.5 font-bold text-white shadow-md transition-all hover:bg-primary/90 hover:shadow-lg"
+              <button
+                type="submit"
+                disabled={submitting}
+                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3.5 font-bold text-white shadow-md transition-all hover:bg-primary/90 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
               >
-                <span>Kirish</span>
+                <span>{submitting ? "Tekshirilmoqda..." : "Kirish"}</span>
                 <span className="material-symbols-outlined text-lg transition-transform group-hover:translate-x-1">
                   login
                 </span>
-              </Link>
+              </button>
             </form>
           </div>
         </div>

@@ -58,22 +58,16 @@ class HealthCheckAPIView(APIView):
 
 
 class NormativeCoefficientListAPIView(ListAPIView):
-    authentication_classes = []
-    permission_classes = []
     serializer_class = NormativeCoefficientSerializer
     queryset = NormativeCoefficient.objects.filter(is_active=True).order_by("normative_type")
 
 
 class DocumentCalculationCategoryListAPIView(ListAPIView):
-    authentication_classes = []
-    permission_classes = []
     serializer_class = DocumentCalculationCategorySerializer
     queryset = DocumentCalculationCategory.objects.all().order_by("name", "id")
 
 
 class DocumentCalculationListCreateAPIView(ListCreateAPIView):
-    authentication_classes = []
-    permission_classes = []
     queryset = DocumentCalculation.objects.all().order_by("-id")
 
     def get_serializer_class(self):
@@ -90,8 +84,6 @@ class DocumentCalculationListCreateAPIView(ListCreateAPIView):
 
 
 class DocumentCalculationRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
-    authentication_classes = []
-    permission_classes = []
     queryset = DocumentCalculation.objects.all()
 
     def get_serializer_class(self):
@@ -147,8 +139,6 @@ def _q2(value: Decimal) -> Decimal:
 
 
 class DocumentCalculationXlsxImportAPIView(APIView):
-    authentication_classes = []
-    permission_classes = []
     parser_classes = [MultiPartParser, FormParser]
 
     def post(self, request):
@@ -323,8 +313,6 @@ class DocumentCalculationXlsxImportAPIView(APIView):
 
 
 class DocumentCalculationReportTableAPIView(APIView):
-    authentication_classes = []
-    permission_classes = []
 
     def get(self, request):
         queryset = (
@@ -426,8 +414,6 @@ class DocumentCalculationReportTableAPIView(APIView):
 
 
 class DashboardStatsAPIView(APIView):
-    authentication_classes = []
-    permission_classes = []
 
     def get(self, request):
         queryset = DocumentCalculation.objects.all()
@@ -1107,8 +1093,6 @@ def _append_koeffitsient_appendix(docx_doc, doc):
 class DocumentContractAPIView(APIView):
     """Shartnoma shablonini to'ldirib base64 .docx qaytaradi."""
 
-    authentication_classes = []
-    permission_classes = []
 
     TEMPLATE_NAME = "shartnoma.docx"
 
@@ -1394,8 +1378,6 @@ class _DocumentBulkZipAPIView(APIView):
       FILE_PREFIX    — ZIP ichidagi fayllar nomi prefiksi
     """
 
-    authentication_classes = []
-    permission_classes = []
 
     DOC_VIEW_CLASS = None
     ZIP_FILENAME = "hujjatlar.zip"
@@ -1593,8 +1575,6 @@ def _run_all_grouped_export_job(job_id):
 class DocumentAllGroupedBulkStartAPIView(APIView):
     """Barcha hujjatlarni guruhlab ZIP qilish jarayonini fon rejimida boshlaydi."""
 
-    authentication_classes = []
-    permission_classes = []
 
     def post(self, request):
         _cleanup_old_bulk_jobs()
@@ -1608,8 +1588,6 @@ class DocumentAllGroupedBulkStartAPIView(APIView):
 class DocumentAllGroupedBulkStatusAPIView(APIView):
     """Fon jarayonining holatini (nechta hujjat tayyor bo'lgani) qaytaradi."""
 
-    authentication_classes = []
-    permission_classes = []
 
     def get(self, request, job_id):
         data = _read_bulk_job_status(job_id)
@@ -1621,8 +1599,6 @@ class DocumentAllGroupedBulkStatusAPIView(APIView):
 class DocumentAllGroupedBulkDownloadAPIView(APIView):
     """Tayyor bo'lgan ZIP faylni yuklab beradi."""
 
-    authentication_classes = []
-    permission_classes = []
 
     def get(self, request, job_id):
         data = _read_bulk_job_status(job_id)
@@ -1639,8 +1615,6 @@ class DocumentAllGroupedBulkDownloadAPIView(APIView):
 class SyncFromSheetsAPIView(APIView):
     """Google Sheets dan bazani qo'lda yangilash."""
 
-    authentication_classes = []
-    permission_classes = []
 
     def post(self, request):
         from django.core.management import call_command
@@ -1676,8 +1650,6 @@ class SyncFromSheetsAPIView(APIView):
 class OrganizationSettingsAPIView(APIView):
     """GET — sozlamalarni olish, PUT — yangilash."""
 
-    authentication_classes = []
-    permission_classes = []
 
     def get(self, request):
         obj = OrganizationSettings.get_instance()

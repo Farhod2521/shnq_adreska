@@ -1,9 +1,9 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import { API_BASE_URL, apiFetch } from "@/lib/auth";
 import { useEffect, useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 
 type OrgSettings = {
   institute_director: string;
@@ -54,7 +54,7 @@ export default function SozlamalarPage() {
     const load = async () => {
       setIsLoading(true);
       try {
-        const res = await fetch(`${API_BASE_URL}/organization-settings/`);
+        const res = await apiFetch(`${API_BASE_URL}/organization-settings/`);
         if (!res.ok) throw new Error("Sozlamalarni yuklashda xatolik.");
         const data = (await res.json()) as OrgSettings;
         setValues({
@@ -80,7 +80,7 @@ export default function SozlamalarPage() {
     setIsSaving(true);
     setError("");
     try {
-      const res = await fetch(`${API_BASE_URL}/organization-settings/`, {
+      const res = await apiFetch(`${API_BASE_URL}/organization-settings/`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),

@@ -1,10 +1,10 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import { API_BASE_URL, apiFetch } from "@/lib/auth";
 import AppLoadingState from "@/components/AppLoadingState";
 import { useState } from "react";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 
 type ImportResult = {
   detail: string;
@@ -33,7 +33,7 @@ export default function BazaXlsxPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`${API_BASE_URL}/document-calculations/import-xlsx/`, {
+      const response = await apiFetch(`${API_BASE_URL}/document-calculations/import-xlsx/`, {
         method: "POST",
         body: formData,
       });

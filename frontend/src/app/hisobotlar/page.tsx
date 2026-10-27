@@ -1,6 +1,7 @@
 "use client";
 
 import AppSidebar from "@/components/AppSidebar";
+import { API_BASE_URL, apiFetch } from "@/lib/auth";
 import AppLoadingState from "@/components/AppLoadingState";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
@@ -40,7 +41,6 @@ type ReportPayload = {
   };
 };
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 
 const formatMoney = (value: string | number): string =>
   new Intl.NumberFormat("uz-UZ", {
@@ -68,7 +68,7 @@ export default function HisobotlarPage() {
       setIsLoading(true);
       setError("");
       try {
-        const response = await fetch(`${API_BASE_URL}/document-calculations/report-table/`);
+        const response = await apiFetch(`${API_BASE_URL}/document-calculations/report-table/`);
         if (!response.ok) {
           throw new Error("Hisobot ma'lumotlarini yuklashda xatolik yuz berdi.");
         }

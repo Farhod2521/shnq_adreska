@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useSyncExternalStore } from "react";
+import { getUserRaw, logout, parseUser } from "@/lib/auth";
 
 type SidebarSection = "dashboard" | "hujjatlar" | "hisobotlar" | "baza_xlsx" | "sozlamalar";
 
@@ -15,6 +19,9 @@ const navItems = [
 ];
 
 export default function AppSidebar({ active }: AppSidebarProps) {
+  const rawUser = useSyncExternalStore(() => () => {}, getUserRaw, () => null);
+  const user = useMemo(() => parseUser(rawUser), [rawUser]);
+
   return (
     <aside className="flex w-64 shrink-0 flex-col overflow-y-auto bg-[#1a227f]">
       {/* Brand */}
@@ -37,8 +44,8 @@ export default function AppSidebar({ active }: AppSidebarProps) {
             />
           </div>
           <div className="overflow-hidden">
-            <p className="truncate text-sm font-semibold text-white">Admin foydalanuvchi</p>
-            <p className="truncate text-xs text-white/60">Boshqaruvchi</p>
+            <p className="truncate text-sm font-semibold text-white">{user?.full_name ?? "Foydalanuvchi"}</p>
+            <p className="truncate text-xs text-white/60">{user?.is_superuser ? "Boshqaruvchi" : "Xodim"}</p>
           </div>
         </div>
       </div>
@@ -74,6 +81,18 @@ export default function AppSidebar({ active }: AppSidebarProps) {
           );
         })}
       </nav>
+
+      {/* Logout */}
+      <div className="px-3 pt-4">
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-white/65 transition-all hover:bg-white/10 hover:text-white"
+        >
+          <span className="material-symbols-outlined text-[22px] text-white/50">logout</span>
+          <span>Chiqish</span>
+        </button>
+      </div>
 
       {/* Bottom version badge */}
       <div className="p-4 text-center">
