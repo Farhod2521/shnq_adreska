@@ -17,6 +17,7 @@ from .security import (
     qr_svg,
     read_mfa_ticket,
     record_attempt,
+    remaining_attempts,
     totp_uri,
     verify_totp,
 )
@@ -38,6 +39,17 @@ def _locked_response():
     return Response(
         {"detail": LOCKED_MESSAGE.format(minutes=settings.AUTH_LOCKOUT_MINUTES), "code": "locked"},
         status=status.HTTP_429_TOO_MANY_REQUESTS,
+    )
+
+
+def _failed_response(username, message, http_status):
+    """Xato urinishdan keyin: qolgan urinishlar sonini aytadi, tugagan bo'lsa darhol blok xabari."""
+    left = remaining_attempts(username)
+    if left == 0:
+        return _locked_response()
+    return Response(
+        {"detail": f"{message} Yana {left} ta urinish qoldi.", "attempts_left": left},
+        status=http_status,
     )
 
 
@@ -68,10 +80,7 @@ class LoginAPIView(APIView):
 
         user = authenticate(request, username=username, password=password)
         if user is None:
-            return Response(
-                {"detail": "Login yoki parol noto'g'ri."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            return _failed_response(username, "Login yoki parol noto'g'ri.", status.HTTP_401_UNAUTHORIZED)
 
         # Standart / oshkor bo'lgan parol bilan kirish taqiqlanadi
         try:
@@ -119,7 +128,7 @@ class MfaVerifyAPIView(APIView):
         mfa = UserMFA.objects.filter(user=user).first()
         if mfa is None or not verify_totp(mfa, request.data.get("code") or ""):
             record_attempt(username, request, LoginAttempt.Result.FAILED_MFA)
-            return Response({"detail": "Tasdiqlash kodi noto'g'ri."}, status=status.HTTP_400_BAD_REQUEST)
+            return _failed_response(username, "Tasdiqlash kodi noto'g'ri.", status.HTTP_400_BAD_REQUEST)
 
         if not mfa.is_confirmed:
             mfa.is_confirmed = True

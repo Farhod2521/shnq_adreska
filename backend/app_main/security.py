@@ -70,10 +70,17 @@ def _failures_since(filter_q: Q, window_start) -> int:
     return LoginAttempt.objects.filter(filter_q, result__in=FAILED_RESULTS, created_at__gt=since).count()
 
 
+def remaining_attempts(username: str) -> int:
+    """Login bloklanguncha qolgan urinishlar soni."""
+    window_start = timezone.now() - timedelta(minutes=settings.AUTH_LOCKOUT_MINUTES)
+    failures = _failures_since(Q(username__iexact=username), window_start)
+    return max(settings.AUTH_LOCKOUT_MAX_ATTEMPTS - failures, 0)
+
+
 def is_locked(username: str, request) -> bool:
     """Oxirgi AUTH_LOCKOUT_MINUTES ichida juda ko'p xato urinish bo'lsa True."""
     window_start = timezone.now() - timedelta(minutes=settings.AUTH_LOCKOUT_MINUTES)
-    if username and _failures_since(Q(username__iexact=username), window_start) >= settings.AUTH_LOCKOUT_MAX_ATTEMPTS:
+    if username and remaining_attempts(username) == 0:
         return True
     ip = client_ip(request)
     if ip and _failures_since(Q(ip_address=ip), window_start) >= settings.AUTH_LOCKOUT_MAX_ATTEMPTS_PER_IP:

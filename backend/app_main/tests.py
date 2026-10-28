@@ -54,8 +54,12 @@ class AuthSecurityTests(TestCase):
         self.assertEqual(resp.status_code, 400)
 
     def test_lockout_after_failed_attempts(self):
-        for _ in range(5):
-            self.assertEqual(self.login("noto'g'ri-parol").status_code, 401)
+        for left in (4, 3, 2, 1):
+            resp = self.login("noto'g'ri-parol")
+            self.assertEqual(resp.status_code, 401)
+            self.assertEqual(resp.data["attempts_left"], left)
+        # 5-xato urinishning o'zidayoq blok xabari qaytadi
+        self.assertEqual(self.login("noto'g'ri-parol").status_code, 429)
         self.assertEqual(self.login().status_code, 429)
         self.assertEqual(LoginAttempt.objects.filter(result=LoginAttempt.Result.FAILED_PASSWORD).count(), 5)
         self.assertTrue(LoginAttempt.objects.filter(result=LoginAttempt.Result.LOCKED).exists())
@@ -63,7 +67,7 @@ class AuthSecurityTests(TestCase):
     def test_lockout_expires(self):
         for _ in range(5):
             self.login("noto'g'ri-parol")
-        LoginAttempt.objects.update(created_at=timezone.now() - timedelta(minutes=16))
+        LoginAttempt.objects.update(created_at=timezone.now() - timedelta(minutes=11))
         self.assertEqual(self.login().status_code, 200)
 
     def test_new_session_id_on_every_login(self):

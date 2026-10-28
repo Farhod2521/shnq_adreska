@@ -127,7 +127,7 @@ AUTH_MFA_TICKET_SECONDS = int(os.getenv("AUTH_MFA_TICKET_SECONDS", "300"))
 # Muvaffaqiyatsiz urinishlarni cheklash
 AUTH_LOCKOUT_MAX_ATTEMPTS = int(os.getenv("AUTH_LOCKOUT_MAX_ATTEMPTS", "5"))
 AUTH_LOCKOUT_MAX_ATTEMPTS_PER_IP = int(os.getenv("AUTH_LOCKOUT_MAX_ATTEMPTS_PER_IP", "20"))
-AUTH_LOCKOUT_MINUTES = int(os.getenv("AUTH_LOCKOUT_MINUTES", "15"))
+AUTH_LOCKOUT_MINUTES = int(os.getenv("AUTH_LOCKOUT_MINUTES", "10"))
 # Sessiya: faoliyatsizlik va umumiy muddat
 AUTH_SESSION_IDLE_MINUTES = int(os.getenv("AUTH_SESSION_IDLE_MINUTES", "30"))
 AUTH_SESSION_MAX_HOURS = int(os.getenv("AUTH_SESSION_MAX_HOURS", "12"))
