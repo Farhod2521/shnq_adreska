@@ -1,6 +1,8 @@
 import os
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
 
 
@@ -17,6 +19,16 @@ class Command(BaseCommand):
             return
 
         User = get_user_model()
+        # Standart yoki oshkor bo'lgan parol o'rnatilmaydi
+        try:
+            validate_password(password, User(username=username, email=email))
+        except ValidationError as exc:
+            self.stderr.write(
+                "DJANGO_ADMIN_PASSWORD xavfsizlik talablariga javob bermaydi, admin paroli o'zgartirilmadi: "
+                + " ".join(exc.messages)
+            )
+            return
+
         user, created = User.objects.get_or_create(username=username, defaults={"email": email})
         user.is_staff = True
         user.is_superuser = True

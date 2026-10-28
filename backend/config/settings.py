@@ -35,7 +35,6 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
-    "rest_framework.authtoken",
     "drf_yasg",
     "app_main",
 ]
@@ -58,7 +57,7 @@ ROOT_URLCONF = "config.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -102,6 +101,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {"min_length": int(os.getenv("AUTH_PASSWORD_MIN_LENGTH", "10"))},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -109,7 +109,46 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
+    {
+        "NAME": "app_main.security.DefaultPasswordValidator",
+    },
+    {
+        "NAME": "app_main.security.PwnedPasswordValidator",
+    },
 ]
+
+AUTHENTICATION_BACKENDS = ["app_main.security.LockoutModelBackend"]
+
+# --- Autentifikatsiya xavfsizligi ---
+# Ikki bosqichli autentifikatsiya (TOTP: Google/Microsoft Authenticator)
+AUTH_MFA_REQUIRED = to_bool(os.getenv("AUTH_MFA_REQUIRED"), default=True)
+AUTH_MFA_ISSUER = os.getenv("AUTH_MFA_ISSUER", "SHNQ Adreska")
+AUTH_MFA_TICKET_SECONDS = int(os.getenv("AUTH_MFA_TICKET_SECONDS", "300"))
+# Muvaffaqiyatsiz urinishlarni cheklash
+AUTH_LOCKOUT_MAX_ATTEMPTS = int(os.getenv("AUTH_LOCKOUT_MAX_ATTEMPTS", "5"))
+AUTH_LOCKOUT_MAX_ATTEMPTS_PER_IP = int(os.getenv("AUTH_LOCKOUT_MAX_ATTEMPTS_PER_IP", "20"))
+AUTH_LOCKOUT_MINUTES = int(os.getenv("AUTH_LOCKOUT_MINUTES", "15"))
+# Sessiya: faoliyatsizlik va umumiy muddat
+AUTH_SESSION_IDLE_MINUTES = int(os.getenv("AUTH_SESSION_IDLE_MINUTES", "30"))
+AUTH_SESSION_MAX_HOURS = int(os.getenv("AUTH_SESSION_MAX_HOURS", "12"))
+# Oshkor parollar bazasi (api.pwnedpasswords.com, k-anonimlik)
+AUTH_PWNED_PASSWORD_CHECK = to_bool(os.getenv("AUTH_PWNED_PASSWORD_CHECK"), default=True)
+
+# /admin/ sessiyasi: faoliyatsizlikda tugaydi, brauzer yopilganda o'chadi
+SESSION_COOKIE_AGE = AUTH_SESSION_IDLE_MINUTES * 60
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {"console": {"class": "logging.StreamHandler"}},
+    "loggers": {"app_main.security": {"handlers": ["console"], "level": "INFO"}},
+}
 
 
 LANGUAGE_CODE = "uz"
@@ -144,7 +183,7 @@ USE_X_FORWARDED_HOST = True
 REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.TokenAuthentication",
+        "app_main.security.SessionTokenAuthentication",
     ],
 }
 

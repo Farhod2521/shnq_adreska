@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .auth_views import LoginAPIView, LogoutAPIView, MeAPIView
+from .auth_views import LoginAPIView, LogoutAPIView, MeAPIView, MfaVerifyAPIView
 from .views import (
     DashboardStatsAPIView,
     DocumentAllGroupedBulkDownloadAPIView,
@@ -33,6 +33,7 @@ app_name = "app_main"
 urlpatterns = [
     path("health/", HealthCheckAPIView.as_view(), name="health"),
     path("auth/login/", LoginAPIView.as_view(), name="auth-login"),
+    path("auth/mfa/verify/", MfaVerifyAPIView.as_view(), name="auth-mfa-verify"),
     path("auth/logout/", LogoutAPIView.as_view(), name="auth-logout"),
     path("auth/me/", MeAPIView.as_view(), name="auth-me"),
     path("dashboard-stats/", DashboardStatsAPIView.as_view(), name="dashboard-stats"),

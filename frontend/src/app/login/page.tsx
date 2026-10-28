@@ -4,6 +4,18 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { API_BASE_URL, AuthUser, getToken, saveAuth } from "@/lib/auth";
 
+type LoginResponse = {
+  token?: string;
+  user?: AuthUser;
+  detail?: string;
+  code?: string;
+  mfa_required?: boolean;
+  mfa_ticket?: string;
+  mfa_setup?: boolean;
+  secret?: string;
+  qr_svg?: string;
+};
+
 export default function LoginPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
@@ -12,9 +24,17 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  // 2-bosqich (MFA) holati
+  const [mfaTicket, setMfaTicket] = useState("");
+  const [mfaSetup, setMfaSetup] = useState<{ secret: string; qr_svg: string } | null>(null);
+  const [code, setCode] = useState("");
 
   useEffect(() => {
-    if (getToken()) router.replace("/dashboard");
+    if (getToken()) {
+      router.replace("/dashboard");
+    } else if (new URLSearchParams(window.location.search).get("sabab") === "idle") {
+      setError("Faoliyatsizlik sababli sessiya yakunlandi. Qaytadan kiring.");
+    }
   }, [router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -31,13 +51,55 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: username.trim(), password }),
       });
-      const data = (await response.json().catch(() => ({}))) as {
-        token?: string;
-        user?: AuthUser;
-        detail?: string;
-      };
-      if (!response.ok || !data.token || !data.user) {
+      const data = (await response.json().catch(() => ({}))) as LoginResponse;
+      if (!response.ok) {
         setError(data.detail ?? "Login yoki parol noto'g'ri.");
+        return;
+      }
+      if (data.mfa_required && data.mfa_ticket) {
+        setPassword("");
+        setMfaTicket(data.mfa_ticket);
+        setMfaSetup(data.mfa_setup && data.secret && data.qr_svg ? { secret: data.secret, qr_svg: data.qr_svg } : null);
+        return;
+      }
+      if (!data.token || !data.user) {
+        setError(data.detail ?? "Login yoki parol noto'g'ri.");
+        return;
+      }
+      saveAuth(data.token, data.user, remember);
+      router.replace("/dashboard");
+    } catch {
+      setError("Server bilan bog'lanib bo'lmadi. Keyinroq urinib ko'ring.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resetToPasswordStep = () => {
+    setMfaTicket("");
+    setMfaSetup(null);
+    setCode("");
+  };
+
+  const handleMfaSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError("");
+    if (!/^\d{6}$/.test(code.trim())) {
+      setError("Ilovadagi 6 xonali kodni kiriting.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/mfa/verify/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mfa_ticket: mfaTicket, code: code.trim() }),
+      });
+      const data = (await response.json().catch(() => ({}))) as LoginResponse;
+      if (!response.ok || !data.token || !data.user) {
+        setCode("");
+        setError(data.detail ?? "Tasdiqlash kodi noto'g'ri.");
+        if (data.code === "ticket_expired" || data.code === "locked") resetToPasswordStep();
         return;
       }
       saveAuth(data.token, data.user, remember);
@@ -93,6 +155,76 @@ export default function LoginPage() {
               Ma&apos;lumotlaringizni kiriting
             </p>
 
+            {mfaTicket ? (
+            <form className="space-y-5" onSubmit={handleMfaSubmit} noValidate>
+              {error && (
+                <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                  <span className="material-symbols-outlined text-[20px]">error</span>
+                  <span>{error}</span>
+                </div>
+              )}
+
+              {mfaSetup ? (
+                <div className="space-y-3 text-sm text-slate-600">
+                  <p>
+                    Ikki bosqichli autentifikatsiyani sozlang: telefoningizdagi Google Authenticator yoki
+                    Microsoft Authenticator ilovasida QR-kodni skanerlang.
+                  </p>
+                  <div
+                    className="mx-auto w-48 rounded-lg border border-slate-200 bg-white p-2 [&_svg]:h-auto [&_svg]:w-full"
+                    dangerouslySetInnerHTML={{ __html: mfaSetup.qr_svg }}
+                  />
+                  <p className="text-center text-xs">
+                    Yoki kalitni qo&apos;lda kiriting:
+                    <br />
+                    <code className="font-mono text-sm break-all text-slate-900 select-all">{mfaSetup.secret}</code>
+                  </p>
+                </div>
+              ) : (
+                <p className="text-center text-sm text-slate-600">
+                  Autentifikator ilovasidagi 6 xonali tasdiqlash kodini kiriting.
+                </p>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <label className="ml-1 text-sm font-semibold text-slate-700">Tasdiqlash kodi</label>
+                <div className="group relative">
+                  <span className="material-symbols-outlined absolute top-1/2 left-3 -translate-y-1/2 text-[20px] text-slate-400 transition-colors group-focus-within:text-primary">
+                    verified_user
+                  </span>
+                  <input
+                    className="w-full rounded-lg border border-slate-200 bg-slate-50 py-3 pr-4 pl-10 font-mono tracking-[0.4em] text-slate-900 outline-none transition-all placeholder:tracking-normal placeholder:text-slate-400 focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    placeholder="000000"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    autoFocus
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-3.5 font-bold text-white shadow-md transition-all hover:bg-primary/90 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <span>{submitting ? "Tekshirilmoqda..." : "Tasdiqlash"}</span>
+                <span className="material-symbols-outlined text-lg">verified</span>
+              </button>
+              <button
+                type="button"
+                className="w-full text-sm text-slate-500 transition-colors hover:text-primary"
+                onClick={() => {
+                  setError("");
+                  resetToPasswordStep();
+                }}
+              >
+                Orqaga
+              </button>
+            </form>
+            ) : (
             <form className="space-y-5" onSubmit={handleSubmit} noValidate>
               {error && (
                 <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
@@ -171,6 +303,7 @@ export default function LoginPage() {
                 </span>
               </button>
             </form>
+            )}
           </div>
         </div>
 

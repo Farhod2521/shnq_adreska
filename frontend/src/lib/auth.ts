@@ -1,6 +1,10 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://192.168.20.104:8000/api";
 
 const TOKEN_KEY = "shnq_auth_token";
+const ACTIVITY_KEY = "shnq_last_activity";
+
+// Faoliyatsizlik muddati (backenddagi AUTH_SESSION_IDLE_MINUTES bilan bir xil bo'lishi kerak)
+export const IDLE_TIMEOUT_MS = Number(process.env.NEXT_PUBLIC_IDLE_TIMEOUT_MINUTES ?? 30) * 60 * 1000;
 const USER_KEY = "shnq_auth_user";
 
 export type AuthUser = {
@@ -51,6 +55,7 @@ export function saveAuth(token: string, user: AuthUser, remember: boolean) {
   const storage = remember ? localStorage : sessionStorage;
   storage.setItem(TOKEN_KEY, token);
   storage.setItem(USER_KEY, JSON.stringify(user));
+  markActivity();
 }
 
 export function clearAuth() {
@@ -58,6 +63,7 @@ export function clearAuth() {
     try {
       storage.removeItem(TOKEN_KEY);
       storage.removeItem(USER_KEY);
+      storage.removeItem(ACTIVITY_KEY);
     } catch {
       // storage mavjud emas
     }
@@ -87,12 +93,26 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
   return response;
 }
 
-export async function logout() {
+/** Oxirgi faollik vaqti — barcha tablar uchun umumiy (localStorage). */
+export function markActivity() {
+  try {
+    localStorage.setItem(ACTIVITY_KEY, String(Date.now()));
+  } catch {
+    // storage mavjud emas
+  }
+}
+
+export function getLastActivity(): number {
+  const value = Number(safeGet(localStorage, ACTIVITY_KEY));
+  return Number.isFinite(value) && value > 0 ? value : Date.now();
+}
+
+export async function logout(reason?: "idle") {
   try {
     await apiFetch(`${API_BASE_URL}/auth/logout/`, { method: "POST" });
   } catch {
     // tarmoq xatosi bo'lsa ham lokal tokenni o'chiramiz
   }
   clearAuth();
-  window.location.replace("/login");
+  window.location.replace(reason ? `/login?sabab=${reason}` : "/login");
 }

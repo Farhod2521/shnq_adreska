@@ -1,5 +1,6 @@
 from decimal import Decimal, ROUND_HALF_UP
 
+from django.conf import settings
 from django.db import models
 
 MROT = Decimal("412000")
@@ -310,3 +311,65 @@ class OrganizationSettings(models.Model):
     def get_instance(cls) -> "OrganizationSettings":
         obj, _ = cls.objects.get_or_create(id=1)
         return obj
+
+
+class LoginAttempt(models.Model):
+    """Tizimga kirish urinishlari jurnali (muvaffaqiyatli va muvaffaqiyatsiz)."""
+
+    class Result(models.TextChoices):
+        SUCCESS = "success", "Muvaffaqiyatli"
+        FAILED_PASSWORD = "failed_password", "Noto'g'ri login/parol"
+        FAILED_MFA = "failed_mfa", "Noto'g'ri tasdiqlash kodi"
+        LOCKED = "locked", "Bloklangan"
+        WEAK_PASSWORD = "weak_password", "Parol talablarga javob bermaydi"
+
+    username = models.CharField(max_length=150, db_index=True, verbose_name="Login")
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP manzil")
+    user_agent = models.CharField(max_length=512, blank=True, default="", verbose_name="Brauzer")
+    result = models.CharField(max_length=32, choices=Result.choices, verbose_name="Natija")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name="Vaqt")
+
+    class Meta:
+        verbose_name = "Kirish urinishi"
+        verbose_name_plural = "Kirish urinishlari"
+        ordering = ["-created_at"]
+
+    def __str__(self) -> str:
+        return f"{self.username} — {self.get_result_display()} ({self.created_at:%Y-%m-%d %H:%M})"
+
+
+class UserMFA(models.Model):
+    """Foydalanuvchining TOTP (Google Authenticator) ikkinchi bosqich sozlamasi."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="mfa")
+    secret = models.CharField(max_length=64, verbose_name="TOTP kalit")
+    is_confirmed = models.BooleanField(default=False, verbose_name="Tasdiqlangan")
+    confirmed_at = models.DateTimeField(null=True, blank=True, verbose_name="Tasdiqlangan vaqt")
+    # Bir kodni qayta ishlatishning oldini olish uchun oxirgi qabul qilingan vaqt qadami
+    last_used_step = models.BigIntegerField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "2FA sozlamasi"
+        verbose_name_plural = "2FA sozlamalari"
+
+    def __str__(self) -> str:
+        return f"{self.user} — {'faol' if self.is_confirmed else 'sozlanmagan'}"
+
+
+class AuthSession(models.Model):
+    """API sessiyasi. Tokenning o'zi emas, faqat SHA-256 xeshi saqlanadi."""
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="auth_sessions")
+    key_hash = models.CharField(max_length=64, unique=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True, verbose_name="IP manzil")
+    user_agent = models.CharField(max_length=512, blank=True, default="", verbose_name="Brauzer")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Yaratilgan")
+    last_activity = models.DateTimeField(auto_now_add=True, verbose_name="Oxirgi faollik")
+
+    class Meta:
+        verbose_name = "Faol sessiya"
+        verbose_name_plural = "Faol sessiyalar"
+        ordering = ["-last_activity"]
+
+    def __str__(self) -> str:
+        return f"{self.user} — {self.last_activity:%Y-%m-%d %H:%M}"

@@ -10,3 +10,4 @@ openpyxl
 python-docx
 gspread
 google-auth
+qrcode
